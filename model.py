@@ -37,9 +37,22 @@ def mul_channel_arg_scope(weight_decay=0.00004,
         normalizer_params=normalizer_params) as sc:
       return sc
 
+def mul_channel_arg_scope_gropnorm(weight_decay=0.00004,
+                        activation_fn=tf.nn.relu):
+  # Set weight_decay for weights in Conv and FC layers.
+  with slim.arg_scope([slim.conv2d]):
+    with slim.arg_scope(
+        [slim.conv2d],
+        weights_initializer=slim.variance_scaling_initializer(),
+        activation_fn=activation_fn,
+        normalizer_fn=slim.group_norm,
+        ) as sc:
+      return sc
+base_arg = mul_channel_arg_scope_gropnorm
+
 def classfy_model(feature_map,ix):
     with tf.variable_scope('classfy'+str(ix),reuse=tf.AUTO_REUSE):
-        with slim.arg_scope(mul_channel_arg_scope()):
+        with slim.arg_scope(base_arg()):
             feature_map = slim.repeat(feature_map,4,slim.conv2d,num_outputs=256,kernel_size=3,stride=1,scope='classfy_repeat')
         out_puts = slim.conv2d(feature_map, config.Config['num_classes'] * 9, kernel_size=3, stride=1,scope='classfy_conv',
                                weights_initializer=tf.initializers.zeros,activation_fn=None)
@@ -49,7 +62,7 @@ def classfy_model(feature_map,ix):
 
 def regression_model(feature_map,ix):
     with tf.variable_scope('regression'+str(ix), reuse=tf.AUTO_REUSE):
-        with slim.arg_scope(mul_channel_arg_scope()):
+        with slim.arg_scope(base_arg()):
             feature_map = slim.repeat(feature_map, 4, slim.conv2d, num_outputs=256, kernel_size=3, stride=1,scope='regression_repeat')
         out_puts = slim.conv2d(feature_map, 4 * 9, kernel_size=3, stride=1,scope='regression',activation_fn=None)
         out_puts = tf.reshape(out_puts, shape=(config.batch_size,-1, 4))
@@ -58,7 +71,7 @@ def regression_model(feature_map,ix):
 
 def hebing(feature_map,scope):
     with tf.variable_scope(scope, reuse=tf.AUTO_REUSE):
-        with slim.arg_scope(mul_channel_arg_scope()):
+        with slim.arg_scope(base_arg()):
             feature_map = slim.repeat(feature_map, 4, slim.conv2d, num_outputs=256, kernel_size=3, stride=1,scope='regression_repeat')
         box = slim.conv2d(feature_map, 4 * 9, kernel_size=3, stride=1,scope='regression',activation_fn=None)
         box = tf.reshape(box, shape=(config.batch_size,-1, 4))
@@ -78,8 +91,8 @@ def get_box_logits(img,cfg):
     logits = []
     boxes = []
     for ix, fp in enumerate(fpns):
-        logits.append(classfy_model(fp,0))
-        boxes.append(regression_model(fp,0))
+        logits.append(classfy_model(fp,int(ix/2)))
+        boxes.append(regression_model(fp,int(ix/2)))
     logits = tf.concat(logits, axis=1)
     boxes = tf.concat(boxes, axis=1)
 

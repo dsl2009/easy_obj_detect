@@ -1,6 +1,47 @@
 from nets.resnet_v2 import resnet_v2_block,resnet_v2,resnet_arg_scope
 import tensorflow as tf
 from tensorflow.contrib import slim
+import config
+def resnet_arg_scope_batch_norm(weight_decay=0.0001,
+                     batch_norm_decay=0.997,
+                     batch_norm_epsilon=1e-5,
+                     batch_norm_scale=True,
+                     activation_fn=tf.nn.relu,
+                     use_batch_norm=True):
+
+  batch_norm_params = {
+      'decay': batch_norm_decay,
+      'epsilon': batch_norm_epsilon,
+      'scale': batch_norm_scale,
+      'updates_collections': tf.GraphKeys.UPDATE_OPS,
+      'fused': None,  # Use fused batch norm if possible.
+  }
+
+  with slim.arg_scope(
+      [slim.conv2d],
+      weights_regularizer=slim.l2_regularizer(weight_decay),
+      weights_initializer=slim.variance_scaling_initializer(),
+      activation_fn=activation_fn,
+      normalizer_fn=slim.batch_norm if use_batch_norm else None,
+      normalizer_params=batch_norm_params):
+    with slim.arg_scope([slim.batch_norm], **batch_norm_params):
+      with slim.arg_scope([slim.max_pool2d], padding='SAME') as arg_sc:
+        return arg_sc
+
+
+def resnet_arg_scope_group_norm(weight_decay=0.0001,
+                                activation_fn=tf.nn.relu,
+                               ):
+    with slim.arg_scope(
+            [slim.conv2d],
+            weights_regularizer=slim.l2_regularizer(weight_decay),
+            weights_initializer=slim.variance_scaling_initializer(),
+            activation_fn=activation_fn,
+            normalizer_fn=slim.group_norm,
+            ):
+        with slim.arg_scope([slim.group_norm]):
+            with slim.arg_scope([slim.max_pool2d], padding='SAME') as arg_sc:
+                return arg_sc
 
 def resnet_v2_50(inputs,
                  num_classes=None,
@@ -25,8 +66,7 @@ def resnet_v2_50(inputs,
 
 
 def fpn(img):
-
-    with slim.arg_scope(resnet_arg_scope()):
+    with slim.arg_scope(resnet_arg_scope_group_norm()):
         _, endpoint = resnet_v2_50(img)
     c1 = endpoint['resnet_v2_50/block1']
     c2 = endpoint['resnet_v2_50/block2']
@@ -55,4 +95,10 @@ def fpn(img):
 
     p7 = slim.nn.relu(p6)
     p7 = slim.conv2d(p7, 256, kernel_size=3, stride=2, activation_fn=None)
-    return [p3, p4, p5, p6, p7]
+
+    if max(config.image_size) >=768:
+        p8 = slim.nn.relu(p7)
+        p8 = slim.conv2d(p7, 256, kernel_size=3, stride=2, activation_fn=None)
+        return [p3, p4, p5, p6, p7,p8]
+    else:
+        return [p3, p4, p5, p6, p7]

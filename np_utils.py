@@ -112,15 +112,20 @@ def gen_ssd_anchors1():
     return out
 
 def gen_ssd_anchors():
-    scals = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
-    size = [24, 48, 96, 192, 384]
-    sc = [(s * scals[0], s * scals[1], s * scals[2]) for s in size]
+    if max(config.image_size) >=768:
+        size = [24, 48, 96, 192, 384, 600]
+        feature_stride = [8, 16, 32, 64, 128, 256]
+        ratios = [[0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2]]
+    else:
+        size = [24, 48, 96, 192, 384]
+        feature_stride = [8, 16, 32, 64, 128]
+        ratios = [[0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2]]
 
-    ratios = [[0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2]]
-    feature_stride = [8, 16, 32, 64, 128]
+    scals = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
+    sc = [(s * scals[0], s * scals[1], s * scals[2]) for s in size]
     shape = [(config.image_size[0]/x, config.image_size[1]/x) for x in feature_stride]
     anchors = gen_multi_anchors(scales=sc,ratios=ratios,shape=shape,feature_stride=feature_stride)
-    anchors = anchors/np.asarray([config.image_size[0],config.image_size[1], config.image_size[0], config.image_size[1]])
+    anchors = anchors/np.asarray([config.image_size[1],config.image_size[0], config.image_size[1], config.image_size[0]])
     out = np.clip(anchors, a_min=0.0, a_max=1.0)
 
     return out
@@ -154,7 +159,7 @@ def get_loc_conf(true_box, true_label,batch_size = 4,cfg = config.voc_vgg_300):
 
 def revert_image(scale,padding,image_size,box):
 
-    box = box*image_size
+    box = box*np.asarray([image_size[1],image_size[0],image_size[1],image_size[0]])
 
     box[:, 0] = box[:, 0] - padding[1][0]
     box[:, 1] = box[:, 1] - padding[0][0]

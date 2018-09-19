@@ -193,16 +193,16 @@ COCO_CLASSES = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'tr
                 'donut', 'cake', 'chair', 'couch', 'potted plant', 'bed', 'dining table', 'toilet',
                 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink',
                 'refrigerator', 'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush']
-
+BDD = ['bike', 'bus', 'car', 'motor', 'person', 'rider','traffic light', 'traffic sign', 'train', 'truck']
 
 Tree = ['tree']
 MAX_GT = 100
 batch_size = 8
-image_size = [768, 1280]
+image_size = [768,1280]
 mask_pool_shape = 28
 norm_value = 2.0
 mask_weight_loss = 2.0
-mask_train = 80
+mask_train = 100
 flag = 1
 local_voc_dir = '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/VOCdevkit/VOCdevkit'
 server_voc_dir = '/data_set/data/VOCdevkit'
@@ -213,14 +213,18 @@ local_coco_ann = '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/coco/raw-data/
 server_coco_dir = '/data_set/data/train2014'
 server_coco_ann = '/data_set/data/annotations/instances_train2014.json'
 
-local_check = '/home/dsl/all_check/resnet_v2_50_2017_04_14/resnet_v2_50.ckpt'
+local_check = '/home/xair/PycharmProjects/easy_obj_detect/resnet_v2_50_2017_04_14/resnet_v2_50.ckpt'
 server_check = '/data_set/check/inception_v2.ckpt'
 
-local_save = '/home/dsl/all_check/face_detect/bdd'
+local_save = 'bdd_check_group_norm'
 server_save = '/data_set/check/voc_ssd_yolo'
+if max(image_size) < 768:
+    feature_stride = [8, 16, 32,64,128]
+    aspect_num = [9,9,9,9,9]
+else:
+    feature_stride = [8, 16, 32, 64, 128, 256]
+    aspect_num = [9, 9, 9, 9, 9, 9]
 
-feature_stride = [8, 16, 32,64,128]
-aspect_num = [9,9,9,9,9]
 total_anchor_num = sum([(image_size[0]/x)*(image_size[1]/x)*y for x,y in zip(feature_stride,aspect_num)])
 if flag == 1:
     save_dir = local_save
