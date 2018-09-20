@@ -63,10 +63,13 @@ def resnet_v2_50(inputs,
                    global_pool=global_pool, output_stride=output_stride,
                    include_root_block=True, spatial_squeeze=spatial_squeeze,
                    reuse=reuse, scope=scope)
-
+if config.is_use_groupnorm:
+    base_arg = resnet_arg_scope_group_norm
+else:
+    base_arg = resnet_arg_scope
 
 def fpn(img):
-    with slim.arg_scope(resnet_arg_scope_group_norm()):
+    with slim.arg_scope(base_arg()):
         _, endpoint = resnet_v2_50(img)
     c1 = endpoint['resnet_v2_50/block1']
     c2 = endpoint['resnet_v2_50/block2']

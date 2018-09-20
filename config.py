@@ -138,7 +138,7 @@ face_inceptionv2_dsl_500 = {
 }
 
 remove_norm = {
-    'num_classes': 11,
+    'num_classes': 2,
     'feature_maps': [64, 32, 16,8,4],
     'steps': [8, 16, 32,64,128],
     'min_sizes': [10 , 50 ,165 ],
@@ -198,12 +198,13 @@ BDD = ['bike', 'bus', 'car', 'motor', 'person', 'rider','traffic light', 'traffi
 Tree = ['tree']
 MAX_GT = 100
 batch_size = 8
-image_size = [768,1280]
+image_size = [512,512]
 mask_pool_shape = 28
 norm_value = 2.0
 mask_weight_loss = 2.0
 mask_train = 100
 flag = 1
+is_use_groupnorm = False
 local_voc_dir = '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/VOCdevkit/VOCdevkit'
 server_voc_dir = '/data_set/data/VOCdevkit'
 
@@ -216,7 +217,7 @@ server_coco_ann = '/data_set/data/annotations/instances_train2014.json'
 local_check = '/home/xair/PycharmProjects/easy_obj_detect/resnet_v2_50_2017_04_14/resnet_v2_50.ckpt'
 server_check = '/data_set/check/inception_v2.ckpt'
 
-local_save = 'bdd_check_group_norm'
+local_save = 'guoshu'
 server_save = '/data_set/check/voc_ssd_yolo'
 if max(image_size) < 768:
     feature_stride = [8, 16, 32,64,128]
@@ -232,7 +233,7 @@ if flag == 1:
     voc_dir = local_voc_dir
     coco_image_dir = local_coco_dir
     annotations = local_coco_ann
-    batch_size = 2
+    batch_size = 8
 elif flag ==2:
     save_dir = server_save
     check_dir = server_check

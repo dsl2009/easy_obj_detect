@@ -48,7 +48,10 @@ def mul_channel_arg_scope_gropnorm(weight_decay=0.00004,
         normalizer_fn=slim.group_norm,
         ) as sc:
       return sc
-base_arg = mul_channel_arg_scope_gropnorm
+if config.is_use_groupnorm:
+    base_arg = mul_channel_arg_scope_gropnorm
+else:
+    base_arg = mul_channel_arg_scope
 
 def classfy_model(feature_map,ix):
     with tf.variable_scope('classfy'+str(ix),reuse=tf.AUTO_REUSE):
