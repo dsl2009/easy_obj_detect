@@ -213,12 +213,15 @@ local_coco_ann = '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/coco/raw-data/
 server_coco_dir = '/data_set/data/train2014'
 server_coco_ann = '/data_set/data/annotations/instances_train2014.json'
 
-local_check = '/home/xair/PycharmProjects/easy_obj_detect/resnet_v2_50_2017_04_14/resnet_v2_50.ckpt'
+local_check = '/home/dsl/all_check/resnet_v2_50_2017_04_14/resnet_v2_50.ckpt'
 server_check = '/data_set/check/inception_v2.ckpt'
 
-local_save = 'bdd_check_group_norm'
+local_save = '/home/dsl/all_check/obj_detect/bn-640'
 server_save = '/data_set/check/voc_ssd_yolo'
-if max(image_size) < 768:
+
+is_user_group_norm = False
+is_use_last = True
+if not is_use_last:
     feature_stride = [8, 16, 32,64,128]
     aspect_num = [9,9,9,9,9]
 else:
@@ -232,7 +235,7 @@ if flag == 1:
     voc_dir = local_voc_dir
     coco_image_dir = local_coco_dir
     annotations = local_coco_ann
-    batch_size = 2
+    batch_size = 8
 elif flag ==2:
     save_dir = server_save
     check_dir = server_check

@@ -14,7 +14,7 @@ def log_sum(x):
     return tf.reshape(data, (-1, 1))
 def soft_focal_loss(logits,labels,number_cls=20):
     labels = tf.one_hot(labels,number_cls)
-    loss = tf.reduce_sum(labels*(-(1 - tf.nn.softmax(logits))**1*tf.log(tf.nn.softmax(logits))),axis=1)
+    loss = tf.reduce_sum(labels*(-(1 - tf.nn.softmax(logits))**2*tf.log(tf.nn.softmax(logits))),axis=1)
     return loss
 
 def get_loss(conf_t,loc_t,pred_loc, pred_confs,cfg):

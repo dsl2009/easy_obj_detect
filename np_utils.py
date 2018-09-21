@@ -112,7 +112,7 @@ def gen_ssd_anchors1():
     return out
 
 def gen_ssd_anchors():
-    if max(config.image_size) >=768:
+    if config.is_use_last:
         size = [24, 48, 96, 192, 384, 600]
         feature_stride = [8, 16, 32, 64, 128, 256]
         ratios = [[0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2]]

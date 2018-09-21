@@ -65,8 +65,14 @@ def resnet_v2_50(inputs,
                    reuse=reuse, scope=scope)
 
 
+if config.is_user_group_norm:
+    base_arg = resnet_arg_scope_group_norm
+else:
+    base_arg = resnet_arg_scope
+
+
 def fpn(img):
-    with slim.arg_scope(resnet_arg_scope_group_norm()):
+    with slim.arg_scope(base_arg()):
         _, endpoint = resnet_v2_50(img)
     c1 = endpoint['resnet_v2_50/block1']
     c2 = endpoint['resnet_v2_50/block2']
@@ -96,7 +102,7 @@ def fpn(img):
     p7 = slim.nn.relu(p6)
     p7 = slim.conv2d(p7, 256, kernel_size=3, stride=2, activation_fn=None)
 
-    if max(config.image_size) >=768:
+    if config.is_use_last:
         p8 = slim.nn.relu(p7)
         p8 = slim.conv2d(p7, 256, kernel_size=3, stride=2, activation_fn=None)
         return [p3, p4, p5, p6, p7,p8]
