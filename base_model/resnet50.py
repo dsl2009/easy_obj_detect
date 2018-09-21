@@ -63,7 +63,10 @@ def resnet_v2_50(inputs,
                    global_pool=global_pool, output_stride=output_stride,
                    include_root_block=True, spatial_squeeze=spatial_squeeze,
                    reuse=reuse, scope=scope)
-
+if config.is_use_groupnorm:
+    base_arg = resnet_arg_scope_group_norm
+else:
+    base_arg = resnet_arg_scope
 
 if config.is_user_group_norm:
     base_arg = resnet_arg_scope_group_norm
