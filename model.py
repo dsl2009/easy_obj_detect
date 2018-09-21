@@ -48,7 +48,8 @@ def mul_channel_arg_scope_gropnorm(weight_decay=0.00004,
         normalizer_fn=slim.group_norm,
         ) as sc:
       return sc
-if config.is_user_group_norm:
+
+if config.is_use_group_norm:
     base_arg = mul_channel_arg_scope_gropnorm
 else:
     base_arg = mul_channel_arg_scope

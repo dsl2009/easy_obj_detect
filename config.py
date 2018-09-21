@@ -219,7 +219,7 @@ server_check = '/data_set/check/inception_v2.ckpt'
 local_save = '/home/dsl/all_check/obj_detect/bn-640'
 server_save = '/data_set/check/voc_ssd_yolo'
 
-is_user_group_norm = False
+is_use_group_norm = False
 is_use_last = True
 if not is_use_last:
     feature_stride = [8, 16, 32,64,128]
