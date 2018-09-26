@@ -13,7 +13,7 @@ import numpy as np
 import time
 import data_gen
 import json
-
+from dsl_data import data_loader_multi
 def train():
     print(config.total_anchor_num)
     img = tf.placeholder(shape=[config.batch_size, config.image_size[0], config.image_size[1], 3], dtype=tf.float32)
@@ -23,7 +23,7 @@ def train():
 
     train_tensors = get_loss(conf, loc, pred_loc, pred_confs,config)
     gen_bdd = data_gen.get_batch(batch_size=config.batch_size,class_name='bdd_crop',image_size=config.image_size,max_detect=100)
-
+    qq = data_loader_multi.get_thread(gen_bdd,1)
     global_step = slim.get_or_create_global_step()
     lr = tf.train.exponential_decay(
         learning_rate=0.001,
@@ -54,7 +54,7 @@ def train():
         for step in range(20000000):
             print('       '+' '.join(['*']*(step%10)))
 
-            images, true_box, true_label = next(gen_bdd)
+            images, true_box, true_label = qq.get()
             try:
                 loct, conft = np_utils.get_loc_conf(true_box, true_label, batch_size=config.batch_size,cfg=config.Config)
             except:
@@ -73,6 +73,7 @@ def train():
 
 def detect():
     config.batch_size = 1
+    config.image_size = [768, 1280]
     imgs = tf.placeholder(shape=(1, config.image_size[0], config.image_size[1], 3), dtype=tf.float32)
     #ig = AddCoords(x_dim=512, y_dim=512)(imgs)
     pred_loc, pred_confs, vbs = get_box_logits(imgs,config)
@@ -81,8 +82,8 @@ def detect():
     total_bxx = []
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/bn-640/model.ckpt-36457')
-        for ip in glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/BDD100K/bdd100k/images/100k/test/*.jpg'):
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/gn-640/model.ckpt-4627')
+        for ip in glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/BDD100K/bdd100k/images/100k/val/*.jpg'):
             print(ip)
             img = cv2.imread(ip)
             imgss = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -130,4 +131,4 @@ def detect():
 
 
 
-detect()
+train()

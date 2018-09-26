@@ -32,8 +32,10 @@ def get_batch(batch_size,class_name, is_shuff = True,max_detect = 50,image_size=
                 random.shuffle(idx)
                 print(idx)
             img, box, lab = data_set.pull_item(idx[index])
-            if len(lab) == 0 or len(lab)>100:
+            if  img is None or len(lab) == 0 or len(lab)>100:
                 index+=1
+                if index >= length:
+                    index = 0
                 continue
             if True:
 

@@ -80,7 +80,7 @@ def fpn(img):
 
     p5 = slim.conv2d(c3, 256, 1, activation_fn=None)
     p5_upsample = tf.image.resize_bilinear(p5, tf.shape(c2)[1:3])
-    p5 = slim.conv2d(p5, 256, 3, rate=4)
+    p5 = slim.conv2d(p5, 256, 3, rate=2)
     p5 = slim.conv2d(p5, 256, 3, activation_fn=None)
 
     p4 = slim.conv2d(c2, 256, 1, activation_fn=None)
@@ -95,7 +95,7 @@ def fpn(img):
     p3 = slim.conv2d(p3, 256, 3, activation_fn=None)
 
     p6 = slim.conv2d(c4,1024,kernel_size=1)
-    p6 = slim.conv2d(p6, 256, 3, rate=4)
+    p6 = slim.conv2d(p6, 256, 3, rate=2)
     p6 = slim.conv2d(p6, 256, kernel_size=3, stride=1, activation_fn=None)
 
     p7 = slim.nn.relu(p6)

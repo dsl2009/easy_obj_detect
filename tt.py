@@ -1,14 +1,13 @@
-from skimage import io
-from dsl_data import utils
-from matplotlib import pyplot as plt
-import json
-dd = {
-      'name':'2',
-      'timestamp':100000,
-      'category':'s',
-      'bbox': [1, 2, 3, 4],
-      'score':0.15
-                    }
-x = []
-x.append(dd)
-print(json.dumps(x))
+from data_gen import get_batch
+from dsl_data import data_loader_multi
+import time
+from tensorflow.contrib import slim
+import tensorflow as tf
+tf.enable_eager_execution()
+
+logits = [[1, 0, 1, 0,],[1, 0, 1, 0,],[1, 0, 1.0, 0,],[1, 0, 1, 0,]]
+labels = [[1, 0, 1, 0,],[1, 0, 1, 0,],[1, 0, 1.0, 0,],[1, 0, 1, 0,]]
+x = slim.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=labels)
+
+
+print(tf.reduce_mean(x))
