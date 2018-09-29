@@ -146,7 +146,7 @@ def fpn(img):
     c2 = endpoint['resnet_v2_50/block2']
     c3 = endpoint['resnet_v2_50/block3']
     c4 = endpoint['resnet_v2_50/block4']
-    with slim.arg_scope(second_arg):
+    with slim.arg_scope(second_arg()):
         p5 = slim.conv2d(c3, 256, 1, activation_fn=None)
         p5_upsample = tf.image.resize_bilinear(p5, tf.shape(c2)[1:3])
         p5 = slim.conv2d(p5, 256, 3, rate=4)

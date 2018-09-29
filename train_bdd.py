@@ -1,6 +1,6 @@
 #coding=utf-8
 import tensorflow as tf
-from loss import get_loss
+from losses.ret_loss import get_loss
 from dsl_data import visual
 import config
 from model import get_box_logits,predict
@@ -56,7 +56,7 @@ def train():
 
             images, true_box, true_label = qq.get()
             try:
-                loct, conft = np_utils.get_loc_conf(true_box, true_label, batch_size=config.batch_size,cfg=config.Config)
+                loct, conft = np_utils.get_loc_conf_new(true_box, true_label, batch_size=config.batch_size,cfg=config.Config)
             except:
                 continue
             feed_dict = {img: images, loc: loct,
@@ -82,8 +82,9 @@ def detect():
     total_bxx = []
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/gn-640/model.ckpt-4627')
-        for ip in glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/BDD100K/bdd100k/images/100k/val/*.jpg'):
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/gn-nn/model.ckpt-12484')
+        images_path = sorted(glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/BDD100K/bdd100k/images/100k/val/*.jpg'))
+        for ip in images_path:
             print(ip)
             img = cv2.imread(ip)
             imgss = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -131,4 +132,4 @@ def detect():
 
 
 
-train()
+detect()

@@ -1,6 +1,6 @@
 #coding=utf-8
 import tensorflow as tf
-from loss import get_loss
+from losses.ssd_loss import get_loss
 from dsl_data import visual
 import config
 from model import get_box_logits,predict

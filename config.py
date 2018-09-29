@@ -216,10 +216,10 @@ server_coco_ann = '/data_set/data/annotations/instances_train2014.json'
 local_check = '/home/dsl/all_check/resnet_v2_50_2017_04_14/resnet_v2_50.ckpt'
 server_check = '/data_set/check/inception_v2.ckpt'
 
-local_save = '/home/dsl/all_check/obj_detect/gn-640'
+local_save = '/home/dsl/all_check/obj_detect/gn-nn'
 server_save = '/data_set/check/voc_ssd_yolo'
 
-is_use_group_norm = True
+is_use_group_norm = False
 is_use_last = True
 if not is_use_last:
     feature_stride = [8, 16, 32,64,128]

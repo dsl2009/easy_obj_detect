@@ -24,13 +24,13 @@ def get_loss(conf_t,loc_t,pred_loc, pred_confs,cfg):
     loc_t = tf.reshape(loc_t,shape=(-1,4))
 
     positive_roi_ix = tf.where(conf_t > 0)[:, 0]
-
     positive_roi_class_ids = tf.cast(
         tf.gather(conf_t, positive_roi_ix), tf.int64)
 
-    indices = tf.stack([positive_roi_ix, positive_roi_class_ids], axis=1)
+    #indices = tf.stack([positive_roi_ix, positive_roi_class_ids], axis=1)
+
     pred_loc = tf.reshape(pred_loc,shape=(-1,4))
-    # Gather the deltas (predicted and true) that contribute to loss
+
     target_bbox = tf.gather(loc_t, positive_roi_ix)
     pred_bbox = tf.gather(pred_loc, positive_roi_ix)
 
@@ -52,7 +52,8 @@ def get_loss(conf_t,loc_t,pred_loc, pred_confs,cfg):
     conf_t = tf.reshape(conf_t, shape=(cfg.batch_size, -1))
 
     zeros = tf.zeros(shape=tf.shape(loss_c),dtype=tf.float32)
-    loss_c = tf.where(tf.greater(conf_t,0),zeros,loss_c)
+    loss_c = tf.where(tf.not_equal(conf_t,0),zeros,loss_c)
+
     pos_num = tf.reduce_sum(tf.cast(tf.greater(conf_t,0),dtype=tf.int32),axis=1)
     ne_num = pos_num*3
 
@@ -72,14 +73,8 @@ def get_loss(conf_t,loc_t,pred_loc, pred_confs,cfg):
         tf.summary.histogram('ct', values=ct)
 
         logits = tf.gather(pred_confs[s,:],ix)
-        '''
-        label = tf.one_hot(label, depth=cfg.Config['num_classes'])
-        ls = tf.keras.backend.switch(tf.size(label) > 0,
-                                     tf.nn.softmax_cross_entropy_with_logits(labels=label, logits=logits),
-                                 tf.constant(0.0))
 
-        ls = tf.reduce_sum(ls)
-        '''
+
         #label = tf.one_hot(label, depth=cfg.Config['num_classes'])
         ls = tf.keras.backend.switch(tf.size(label) > 0,
                                      soft_focal_loss(labels=label, logits=logits,number_cls=cfg.Config['num_classes']),
