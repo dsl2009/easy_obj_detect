@@ -69,8 +69,8 @@ def mid_cov(x, scope):
 def classfy_model(feature_map,ix):
     with tf.variable_scope('classfy'+str(ix),reuse=tf.AUTO_REUSE):
         with slim.arg_scope(base_arg()):
-            #feature_map = slim.repeat(feature_map,4,slim.conv2d,num_outputs=256,kernel_size=3,stride=1,scope='classfy_repeat')
-            feature_map = mid_cov(feature_map, 'mid_'+str(ix))
+            feature_map = slim.repeat(feature_map,4,slim.conv2d,num_outputs=256,kernel_size=3,stride=1,scope='classfy_repeat')
+            #feature_map = mid_cov(feature_map, 'mid_'+str(ix))
         out_puts = slim.conv2d(feature_map, config.Config['num_classes'] * 9, kernel_size=3, stride=1,scope='classfy_conv',
                                weights_initializer=tf.initializers.zeros,activation_fn=None)
         out_puts = tf.reshape(out_puts,shape=(config.batch_size,-1, config.Config['num_classes']))
@@ -80,7 +80,8 @@ def classfy_model(feature_map,ix):
 def regression_model(feature_map,ix):
     with tf.variable_scope('regression'+str(ix), reuse=tf.AUTO_REUSE):
         with slim.arg_scope(base_arg()):
-            feature_map = mid_cov(feature_map, 'mid_' + str(ix))
+            feature_map = slim.repeat(feature_map, 4, slim.conv2d, num_outputs=256, kernel_size=3, stride=1,
+                                      scope='regression_repeat')
         out_puts = slim.conv2d(feature_map, 4 * 9, kernel_size=3, stride=1,scope='regression',activation_fn=None)
         out_puts = tf.reshape(out_puts, shape=(config.batch_size,-1, 4))
 
@@ -107,13 +108,8 @@ def get_box_logits(img,cfg):
     logits = []
     boxes = []
     for ix, fp in enumerate(fpns):
-        if ix<2:
-            logits.append(classfy_model(fp,0))
-            boxes.append(regression_model(fp,0))
-        else:
-            logits.append(classfy_model(fp, 1))
-            boxes.append(regression_model(fp, 1))
-
+        logits.append(classfy_model(fp,int(ix/2)))
+        boxes.append(regression_model(fp,int(ix/2)))
     logits = tf.concat(logits, axis=1)
     boxes = tf.concat(boxes, axis=1)
 

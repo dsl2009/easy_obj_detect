@@ -204,6 +204,8 @@ norm_value = 2.0
 mask_weight_loss = 2.0
 mask_train = 100
 flag = 1
+total_fpn = 5
+
 local_voc_dir = '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/VOCdevkit/VOCdevkit'
 server_voc_dir = '/data_set/data/VOCdevkit'
 
@@ -216,7 +218,7 @@ server_coco_ann = '/data_set/data/annotations/instances_train2014.json'
 local_check = '/home/dsl/all_check/resnet_v2_50_2017_04_14/resnet_v2_50.ckpt'
 server_check = '/data_set/check/inception_v2.ckpt'
 
-local_save = '/home/dsl/all_check/obj_detect/gn-nn'
+local_save = '/home/dsl/all_check/obj_detect/bn_06_33'
 server_save = '/data_set/check/voc_ssd_yolo'
 
 is_use_group_norm = False
