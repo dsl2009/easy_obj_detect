@@ -113,13 +113,18 @@ def gen_ssd_anchors1():
 
 def gen_ssd_anchors():
     if config.is_use_last:
-        size = [24, 48, 96, 192, 384, 600]
+        size = [16, 32, 64, 128, 256, 512]
+        #size = [24, 48, 96, 192, 384, 600]
         feature_stride = [8, 16, 32, 64, 128, 256]
         ratios = [[0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2]]
     else:
         size = [24, 48, 96, 192, 384]
         feature_stride = [8, 16, 32, 64, 128]
         ratios = [[0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2]]
+    if config.total_fpn!=-1:
+        size = size[0:config.total_fpn]
+        feature_stride = feature_stride[0:config.total_fpn]
+        ratios = ratios[0:config.total_fpn]
 
     scals = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
     sc = [(s * scals[0], s * scals[1], s * scals[2]) for s in size]
@@ -181,7 +186,7 @@ def get_loc_conf_new(true_box, true_label,batch_size = 4,cfg = config.voc_vgg_30
         conf = labels[best_true_idx] + 1
         conf[best_true <= 0.3] = 0
         b1 = best_true>0.3
-        b2 = best_true<0.7
+        b2 = best_true<0.6
         conf[b1*b2] = -1
         loc = encode(matches, pri, variances=[0.1, 0.2])
         loc_t[s] = loc

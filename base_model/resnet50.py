@@ -173,6 +173,9 @@ def fpn(img):
         if config.is_use_last:
             p8 = slim.nn.relu(p7)
             p8 = slim.conv2d(p7, 256, kernel_size=3, stride=2, activation_fn=None)
-            return [p3, p4, p5, p6, p7,p8]
+            bn = [p3, p4, p5, p6, p7,p8]
         else:
-            return [p3, p4, p5, p6, p7]
+            bn = [p3, p4, p5, p6, p7]
+        if config.total_fpn!=-1:
+            bn = bn[0:config.total_fpn]
+        return bn
