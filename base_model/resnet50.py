@@ -109,35 +109,28 @@ def fpn_re(img):
     c3 = endpoint['resnet_v2_50/block3']
     c4 = endpoint['resnet_v2_50/block4']
 
-    p5 = slim.conv2d(c3, 256, 1, activation_fn=None)
-    p5_upsample = tf.image.resize_bilinear(p5, tf.shape(c2)[1:3])
-    p5 = slim.conv2d(p5, 256, 3, rate=2)
-    p5 = slim.conv2d(p5, 256, 3, activation_fn=None)
-
-    p4 = slim.conv2d(c2, 256, 1, activation_fn=None)
-    p4 = p4 + p5_upsample
-    p4_upsample = tf.image.resize_bilinear(p4, tf.shape(c1)[1:3])
-    p4 = slim.conv2d(p4, 256, 3, rate=4)
-    p4 = slim.conv2d(p4, 256, 3, activation_fn=None)
-
-    p3 = slim.conv2d(c1, 256, 1, activation_fn=None)
-    p3 = p3 + p4_upsample
-    p3 = slim.conv2d(p3, 256, 3, rate=4)
+    p3 = slim.conv2d(c3, 256, 1, activation_fn=None)
+    p3_upsample = tf.image.resize_bilinear(p3, tf.shape(c2)[1:3])
+    p3 = slim.conv2d(p3, 256, 3, rate=2)
     p3 = slim.conv2d(p3, 256, 3, activation_fn=None)
 
-    p6 = slim.conv2d(c4,1024,kernel_size=1)
-    p6 = slim.conv2d(p6, 256, 3, rate=2)
-    p6 = slim.conv2d(p6, 256, kernel_size=3, stride=1, activation_fn=None)
+    p2 = slim.conv2d(c2, 256, 1, activation_fn=None)
+    p2 = p2 + p3_upsample
+    p2_upsample = tf.image.resize_bilinear(p2, tf.shape(c1)[1:3])
+    p2 = slim.conv2d(p2, 256, 3, rate=4)
+    p2 = slim.conv2d(p2, 256, 3, activation_fn=None)
 
-    p7 = slim.nn.relu(p6)
-    p7 = slim.conv2d(p7, 256, kernel_size=3, stride=2, activation_fn=None)
+    p1 = slim.conv2d(c1, 256, 1, activation_fn=None)
+    p1 = p1 + p2_upsample
+    p1 = slim.conv2d(p1, 256, 3, rate=4)
+    p1 = slim.conv2d(p1, 256, 3, activation_fn=None)
 
-    if config.is_use_last:
-        p8 = slim.nn.relu(p7)
-        p8 = slim.conv2d(p7, 256, kernel_size=3, stride=2, activation_fn=None)
-        return [p3, p4, p5, p6, p7,p8]
-    else:
-        return [p3, p4, p5, p6, p7]
+    p4 = slim.conv2d(c4,1024,kernel_size=1)
+    p4 = slim.conv2d(p4, 256, 3, rate=2)
+    p4 = slim.conv2d(p4, 256, kernel_size=3, stride=1, activation_fn=None)
+    return p1,p2,p3,p4
+
+
 
 def fpn(img):
     with slim.arg_scope(base_arg()):

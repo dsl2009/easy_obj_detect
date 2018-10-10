@@ -128,6 +128,8 @@ def gen_ssd_anchors():
 
     scals = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
     sc = [(s * scals[0], s * scals[1], s * scals[2]) for s in size]
+
+
     shape = [(config.image_size[0]/x, config.image_size[1]/x) for x in feature_stride]
     anchors = gen_multi_anchors(scales=sc,ratios=ratios,shape=shape,feature_stride=feature_stride)
     anchors = anchors/np.asarray([config.image_size[1],config.image_size[0], config.image_size[1], config.image_size[0]])
@@ -135,6 +137,35 @@ def gen_ssd_anchors():
 
     return out
 
+
+def gen_ssd_anchors_new():
+    size = [16, 32, 64]
+    feature_stride = [8, 16, 32, 64]
+    ratios = [[0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2]]
+    scals = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
+    sc = [(s * scals[0], s * scals[1], s * scals[2]) for s in size]
+    sc.append((128, 256, 512))
+    shape = [(config.image_size[0] / x, config.image_size[1] / x) for x in feature_stride]
+    anchors = gen_multi_anchors(scales=sc, ratios=ratios, shape=shape, feature_stride=feature_stride)
+    anchors = anchors / np.asarray(
+        [config.image_size[1], config.image_size[0], config.image_size[1], config.image_size[0]])
+    out = np.clip(anchors, a_min=0.0, a_max=1.0)
+
+    return out
+def gen_anchors_single():
+
+    size = [16, 32, 64, 128, 256, 512]
+
+    feature_stride = [8]
+    ratios = [[ 0.5, 1, 2]]
+
+    scals = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
+    sc = [(16, 32, 64, 128, 256, 512)]
+    shape = [(config.image_size[0]/x, config.image_size[1]/x) for x in feature_stride]
+    anchors = gen_multi_anchors(scales=sc,ratios=ratios,shape=shape,feature_stride=feature_stride)
+    anchors = anchors/np.asarray([config.image_size[1],config.image_size[0], config.image_size[1], config.image_size[0]])
+    out = np.clip(anchors, a_min=0.0, a_max=1.0)
+    return out
 
 def get_loc_conf(true_box, true_label,batch_size = 4,cfg = config.voc_vgg_300):
     pri = gen_ssd_anchors()

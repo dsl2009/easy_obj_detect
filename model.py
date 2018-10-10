@@ -108,12 +108,15 @@ def get_box_logits(img,cfg):
     logits = []
     boxes = []
     for ix, fp in enumerate(fpns):
-        logits.append(classfy_model(fp,int(ix/3)))
-        boxes.append(regression_model(fp,int(ix/3)))
+        logits.append(classfy_model(fp,int(0)))
+        boxes.append(regression_model(fp,int(0)))
     logits = tf.concat(logits, axis=1)
     boxes = tf.concat(boxes, axis=1)
-
     return boxes,logits,None
+
+
+
+
 
 def decode_box(prios,pred_loc,variance=None):
     if variance is None:

@@ -19,7 +19,7 @@ def get_batch(batch_size,class_name, is_shuff = True,max_detect = 50,image_size=
                            image_dr='/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/BDD100K/bdd100k/images/100k/train',
                                    image_size=config.image_size, is_crop=True)
     elif class_name == 'voc':
-        data_set = voc.VOCDetection(root='/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/VOCdevkit/VOCdevkit',
+        data_set = voc.VOCDetection(root='D:/deep_learn_data/VOCdevkit',
                                    image_size=config.image_size)
 
     length = data_set.len()
