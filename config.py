@@ -138,7 +138,7 @@ face_inceptionv2_dsl_500 = {
 }
 
 remove_norm = {
-    'num_classes': 11,
+    'num_classes': 21,
     'feature_maps': [64, 32, 16,8,4],
     'steps': [8, 16, 32,64,128],
     'min_sizes': [10 , 50 ,165 ],
@@ -218,7 +218,7 @@ server_coco_ann = '/data_set/data/annotations/instances_train2014.json'
 local_check = '/home/dsl/all_check/resnet_v2_50_2017_04_14/resnet_v2_50.ckpt'
 server_check = '/data_set/check/inception_v2.ckpt'
 
-local_save = 'bn_06_930'
+local_save = '/home/dsl/all_check/obj_detect/nn1010_voc'
 server_save = '/data_set/check/voc_ssd_yolo'
 
 is_use_group_norm = False

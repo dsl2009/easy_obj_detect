@@ -3,15 +3,15 @@ import tensorflow as tf
 from losses.ret_loss import get_loss
 from dsl_data import visual
 import config
-from model import get_box_logits,predict
+from models.dz_model import get_box_logits,predict
 from dsl_data.utils import resize_image,resize_image_fixed_size
 from tensorflow.contrib import slim
-import np_utils
+from utils import np_utils
 import glob
 import cv2
 import numpy as np
 import time
-import data_gen
+from data_set import data_gen
 import json
 from dsl_data import data_loader_multi
 def train():
@@ -20,7 +20,7 @@ def train():
     loc = tf.placeholder(shape=[config.batch_size, config.total_anchor_num, 4], dtype=tf.float32)
     conf = tf.placeholder(shape=[config.batch_size, config.total_anchor_num], dtype=tf.float32)
     pred_loc, pred_confs, vbs = get_box_logits(img,config)
-
+    print(pred_loc)
     train_tensors = get_loss(conf, loc, pred_loc, pred_confs,config)
     gen_bdd = data_gen.get_batch(batch_size=config.batch_size,class_name='bdd_crop',image_size=config.image_size,max_detect=100)
     qq = data_loader_multi.get_thread(gen_bdd,1)
@@ -82,7 +82,7 @@ def detect():
     total_bxx = []
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/bn_06_930/model.ckpt-322981')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/nn1010/model.ckpt-15467')
         images_path = sorted(glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/BDD100K/bdd100k/images/100k/val/*.jpg'))
         for ip in images_path:
             print(ip)
@@ -100,7 +100,7 @@ def detect():
             cls = []
             scores = []
             for s in range(len(p)):
-                if sc[s]>=0.6:
+                if sc[s]>=0.5:
                     bxx.append(bx[s])
                     cls.append(p[s])
                     scores.append(sc[s])

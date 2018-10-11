@@ -3,10 +3,10 @@ import tensorflow as tf
 from losses.ssd_loss import get_loss
 from dsl_data import visual
 import config
-from model import get_box_logits,predict
+from models.dz_model import get_box_logits,predict
 from dsl_data.utils import resize_image
 from tensorflow.contrib import slim
-import np_utils
+from utils import np_utils
 import glob
 import cv2
 import numpy as np

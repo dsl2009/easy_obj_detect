@@ -6,12 +6,12 @@ import config
 from models.dz_model import get_box_logits,predict
 from dsl_data.utils import resize_image,resize_image_fixed_size
 from tensorflow.contrib import slim
-import np_utils
+from utils import np_utils
 import glob
 import cv2
 import numpy as np
 import time
-import data_gen
+from data_set import data_gen
 import json
 from dsl_data import data_loader_multi
 def train():
@@ -27,7 +27,7 @@ def train():
     lr = tf.train.exponential_decay(
         learning_rate=0.001,
         global_step=global_step,
-        decay_steps=400000,
+        decay_steps=40000,
         decay_rate=0.9,
         staircase=True)
 
@@ -72,7 +72,7 @@ def train():
 
 def detect():
     config.batch_size = 1
-    config.image_size = [768, 1280]
+    config.image_size = [512, 512]
     imgs = tf.placeholder(shape=(1, config.image_size[0], config.image_size[1], 3), dtype=tf.float32)
     #ig = AddCoords(x_dim=512, y_dim=512)(imgs)
     pred_loc, pred_confs, vbs = get_box_logits(imgs,config)
@@ -81,8 +81,8 @@ def detect():
     total_bxx = []
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/bn_06_930/model.ckpt-322981')
-        images_path = sorted(glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/BDD100K/bdd100k/images/100k/val/*.jpg'))
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/nn1010_voc/model.ckpt-17676')
+        images_path = sorted(glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/VOCdevkit/VOCdevkit/VOC2012/JPEGImages/*.jpg'))
         for ip in images_path:
             print(ip)
             img = cv2.imread(ip)
@@ -99,16 +99,18 @@ def detect():
             cls = []
             scores = []
             for s in range(len(p)):
-                if sc[s]>=0.6:
+                if sc[s]>=0.3:
                     bxx.append(bx[s])
                     cls.append(p[s])
                     scores.append(sc[s])
             if len(bxx) > 0:
 
-                #bxx = np.asarray(bxx)*np.asarray([config.image_size[1],config.image_size[0],config.image_size[1],config.image_size[0]])
-                #
-                bxx = np_utils.revert_image(scale, padding, config.image_size, bxx)
-                visual.display_instances_title(imgss, bxx, class_ids=np.asarray(cls),class_names=config.BDD,scores=scores)
+                bxx = np.asarray(bxx)*np.asarray([config.image_size[1],config.image_size[0],config.image_size[1],config.image_size[0]])
+
+                visual.display_instances_title(org, np.asarray(bxx), class_ids=np.asarray(cls),class_names=config.VOC_CLASSES,scores=scores)
+
+                #bxx = np_utils.revert_image(scale, padding, config.image_size, bxx)
+                #visual.display_instances_title(imgss, bxx, class_ids=np.asarray(cls),class_names=config.VOC_CLASSES,scores=scores)
                 name = ip.split('/')[-1]
                 timestamp = 10000
                 dd = dict()
@@ -117,7 +119,7 @@ def detect():
                     dd = {
                         'name':name,
                         'timestamp':timestamp,
-                        'category':config.BDD[cls[ix]],
+                        'category':config.VOC_CLASSES[cls[ix]],
                         'bbox': [int(b[0]), int(b[1]),int(b[2]), int(b[3])],
                         'score':float(scores[ix])
                     }
@@ -131,4 +133,4 @@ def detect():
 
 
 
-train()
+detect()

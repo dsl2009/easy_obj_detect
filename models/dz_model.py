@@ -1,5 +1,5 @@
 import tensorflow as tf
-from np_utils import gen_ssd_anchors
+from utils.np_utils import gen_ssd_anchors,gen_ssd_anchors_new
 from tensorflow.contrib import slim
 import config
 from base_model import resnet50
@@ -127,7 +127,7 @@ def decode_box(prios,pred_loc,variance=None):
     return  tf.concat([xy_min,xy_max],axis=1)
 
 def predict(ig,pred_loc, pred_confs, vbs,cfg):
-    priors = gen_ssd_anchors()
+    priors = gen_ssd_anchors_new()
     box = decode_box(prios=priors, pred_loc=pred_loc[0])
     props = slim.nn.softmax(pred_confs[0])
     pp = props[:,1:]

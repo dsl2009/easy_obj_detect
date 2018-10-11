@@ -1,6 +1,6 @@
 from nets import resnet_v2
 import tensorflow as tf
-from np_utils import gen_ssd_anchors
+from utils.np_utils import gen_ssd_anchors
 from tensorflow.contrib import slim
 import config
 from base_model import resnet50
