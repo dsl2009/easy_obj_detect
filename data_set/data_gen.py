@@ -2,7 +2,7 @@ import random
 import numpy as np
 import config
 from dsl_data import aug_utils
-from dsl_data import xair_guoshu, mianhua, bdd, voc
+from dsl_data import xair_guoshu, mianhua, bdd, voc, Lucai
 def get_batch(batch_size,class_name, is_shuff = True,max_detect = 50,image_size=300):
     if class_name == 'guoshu':
         data_set = xair_guoshu.Tree('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/xair/guoshu/data',
@@ -21,6 +21,8 @@ def get_batch(batch_size,class_name, is_shuff = True,max_detect = 50,image_size=
     elif class_name == 'voc':
         data_set = voc.VOCDetection(root='/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/VOCdevkit/VOCdevkit',
                                    image_size=config.image_size)
+    elif class_name == 'lvcai':
+        data_set = Lucai.Lucai(image_dr='D:/deep_learn_data/luntai/round2', image_size=config.image_size, is_crop=False)
 
     length = data_set.len()
     idx = list(range(length))
@@ -32,6 +34,7 @@ def get_batch(batch_size,class_name, is_shuff = True,max_detect = 50,image_size=
                 random.shuffle(idx)
                 print(idx)
             img, box, lab = data_set.pull_item(idx[index])
+
             if  img is None or len(lab) == 0 or len(lab)>100:
                 index+=1
                 if index >= length:

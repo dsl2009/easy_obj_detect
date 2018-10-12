@@ -38,7 +38,6 @@ def pt_from(boxes):
 
 def encode(matched, priors, variances):
 
-
     # dist b/t match center and prior's center
     g_cxcy = (matched[:, :2] + matched[:, 2:])/2 - priors[:, :2]
     # encode variance
@@ -153,6 +152,23 @@ def gen_ssd_anchors_new():
     out = np.clip(anchors, a_min=0.0, a_max=1.0)
 
     return out
+
+def gen_ssd_anchors_lvcai():
+    size = [32, 96, 192]
+    feature_stride = [8, 16, 32, 64]
+    ratios = [[1, 2, 4, 8,16, 32, 50], [1, 2, 4, 8,16, 32, 50], [1, 2, 4, 8,16, 32, 50], [1, 2, 4, 8,16, 32, 50]]
+    scals = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
+    sc = [[s * scals[0], s * scals[1], s * scals[2]] for s in size]
+
+    sc.append([256, 384, 512, 728, 900])
+    shape = [(config.image_size[0] / x, config.image_size[1] / x) for x in feature_stride]
+    anchors = gen_multi_anchors(scales=sc, ratios=ratios, shape=shape, feature_stride=feature_stride)
+    anchors = anchors / np.asarray(
+        [config.image_size[1], config.image_size[0], config.image_size[1], config.image_size[0]])
+    out = np.clip(anchors, a_min=0.0, a_max=1.0)
+
+    return out
+
 def gen_anchors_single():
 
     size = [16, 32, 64, 128, 256, 512]
@@ -202,9 +218,9 @@ def get_loc_conf_new(true_box, true_label,batch_size = 4,cfg = config.voc_vgg_30
     for s in range(batch_size):
         true_box_tm = true_box[s]
         labels = true_label[s]
-        ix = np.sum(true_box_tm, axis=1)
-        true_box_tm = true_box_tm[np.where(ix > 0)]
-        labels = labels[np.where(ix > 0)]
+        ix = (true_box_tm[:, 2]- true_box_tm[:,0])*(true_box_tm[:, 3]- true_box_tm[:,1])
+        true_box_tm = true_box_tm[np.where(ix > 1e-6)]
+        labels = labels[np.where(ix > 1e-6)]
         ops = over_laps(true_box_tm, pt_from(pri))
         best_true = np.max(ops, axis=0)
         best_true_idx = np.argmax(ops, axis=0)

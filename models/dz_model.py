@@ -106,8 +106,8 @@ def get_box_logits(img,cfg):
     logits = []
     boxes = []
     for fp in fpns[0:-1]:
-        logits.append(classfy_model(fp,0))
-        boxes.append(regression_model(fp,0))
+        logits.append(classfy_model(fp,0, 9))
+        boxes.append(regression_model(fp,0, 9))
     logits.append(classfy_model(fpns[-1], 1, num_anchors=18))
     boxes.append(regression_model(fpns[-1], 1, num_anchors=18))
 
