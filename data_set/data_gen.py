@@ -22,7 +22,7 @@ def get_batch(batch_size,class_name, is_shuff = True,max_detect = 50,image_size=
         data_set = voc.VOCDetection(root='/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/VOCdevkit/VOCdevkit',
                                    image_size=config.image_size)
     elif class_name == 'lvcai':
-        data_set = Lucai.Lucai(image_dr='D:/deep_learn_data/luntai/round2', image_size=config.image_size, is_crop=False)
+        data_set = Lucai.Lucai(image_dr='/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/round2', image_size=config.image_size, is_crop=False)
 
     length = data_set.len()
     idx = list(range(length))

@@ -1,5 +1,5 @@
 import tensorflow as tf
-from utils.np_utils import gen_ssd_anchors,gen_ssd_anchors_new
+from utils.np_utils import gen_ssd_anchors_lvcai,gen_ssd_anchors_new
 from tensorflow.contrib import slim
 import config
 from base_model import resnet50
@@ -106,10 +106,10 @@ def get_box_logits(img,cfg):
     logits = []
     boxes = []
     for fp in fpns[0:-1]:
-        logits.append(classfy_model(fp,0, 9))
-        boxes.append(regression_model(fp,0, 9))
-    logits.append(classfy_model(fpns[-1], 1, num_anchors=18))
-    boxes.append(regression_model(fpns[-1], 1, num_anchors=18))
+        logits.append(classfy_model(fp,0, 21))
+        boxes.append(regression_model(fp,0, 21))
+    logits.append(classfy_model(fpns[-1], 1, num_anchors=35))
+    boxes.append(regression_model(fpns[-1], 1, num_anchors=35))
 
     logits = tf.concat(logits, axis=1)
     boxes = tf.concat(boxes, axis=1)
@@ -130,7 +130,7 @@ def decode_box(prios,pred_loc,variance=None):
     return  tf.concat([xy_min,xy_max],axis=1)
 
 def predict(ig,pred_loc, pred_confs, vbs,cfg):
-    priors = gen_ssd_anchors_new()
+    priors = gen_ssd_anchors_lvcai()
     box = decode_box(prios=priors, pred_loc=pred_loc[0])
     props = slim.nn.softmax(pred_confs[0])
     pp = props[:,1:]

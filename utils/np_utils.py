@@ -154,13 +154,13 @@ def gen_ssd_anchors_new():
     return out
 
 def gen_ssd_anchors_lvcai():
-    size = [32, 96, 192]
+    size = [16, 32, 64]
     feature_stride = [8, 16, 32, 64]
-    ratios = [[1, 2, 4, 8,16, 32, 50], [1, 2, 4, 8,16, 32, 50], [1, 2, 4, 8,16, 32, 50], [1, 2, 4, 8,16, 32, 50]]
+    ratios = [[0.5, 1, 2, 4, 8,16, 32], [0.5, 1, 2, 4, 8,16, 32], [0.5, 1, 2, 4, 8,16, 32], [0.5, 1, 2, 4, 8,16, 32]]
     scals = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
     sc = [[s * scals[0], s * scals[1], s * scals[2]] for s in size]
 
-    sc.append([256, 384, 512, 728, 900])
+    sc.append([128, 196, 256, 384, 512])
     shape = [(config.image_size[0] / x, config.image_size[1] / x) for x in feature_stride]
     anchors = gen_multi_anchors(scales=sc, ratios=ratios, shape=shape, feature_stride=feature_stride)
     anchors = anchors / np.asarray(
@@ -211,7 +211,7 @@ def get_loc_conf(true_box, true_label,batch_size = 4,cfg = config.voc_vgg_300):
     return loc_t,conf_t
 
 def get_loc_conf_new(true_box, true_label,batch_size = 4,cfg = config.voc_vgg_300):
-    pri = gen_ssd_anchors_new()
+    pri = gen_ssd_anchors_lvcai()
     num_priors = pri.shape[0]
     loc_t = np.zeros([batch_size, num_priors, 4])
     conf_t = np.zeros([batch_size, num_priors])
@@ -234,7 +234,7 @@ def get_loc_conf_new(true_box, true_label,batch_size = 4,cfg = config.voc_vgg_30
         conf = labels[best_true_idx] + 1
         conf[best_true <= 0.3] = 0
         b1 = best_true>0.3
-        b2 = best_true<0.6
+        b2 = best_true<=0.5
         conf[b1*b2] = -1
         loc = encode(matches, pri, variances=[0.1, 0.2])
         loc_t[s] = loc

@@ -69,7 +69,7 @@ def mid_cov(x, scope):
 def classfy_model(feature_map,ix):
     with tf.variable_scope('classfy'+str(ix),reuse=tf.AUTO_REUSE):
         with slim.arg_scope(base_arg()):
-            feature_map = slim.repeat(feature_map,4,slim.conv2d,num_outputs=256,kernel_size=3,stride=1,scope='classfy_repeat')
+            feature_map = slim.repeat(feature_map,4,slim.conv2d,num_outputs=512,kernel_size=3,stride=1,scope='classfy_repeat')
             #feature_map = mid_cov(feature_map, 'mid_'+str(ix))
         out_puts = slim.conv2d(feature_map, config.Config['num_classes'] * 9, kernel_size=3, stride=1,scope='classfy_conv',
                                weights_initializer=tf.initializers.zeros,activation_fn=None)
