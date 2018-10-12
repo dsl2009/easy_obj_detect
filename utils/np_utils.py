@@ -143,8 +143,9 @@ def gen_ssd_anchors_new():
     feature_stride = [8, 16, 32, 64]
     ratios = [[0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2]]
     scals = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
-    sc = [(s * scals[0], s * scals[1], s * scals[2]) for s in size]
-    sc.append((128, 256, 512))
+    sc = [[s * scals[0], s * scals[1], s * scals[2]] for s in size]
+
+    sc.append([128, 196, 256, 384, 512, 600])
     shape = [(config.image_size[0] / x, config.image_size[1] / x) for x in feature_stride]
     anchors = gen_multi_anchors(scales=sc, ratios=ratios, shape=shape, feature_stride=feature_stride)
     anchors = anchors / np.asarray(

@@ -64,23 +64,23 @@ def mid_cov(x, scope):
         return x
 
 
-def classfy_model(feature_map,ix):
+def classfy_model(feature_map,ix, num_anchors=9):
     with tf.variable_scope('classfy'+str(ix),reuse=tf.AUTO_REUSE):
         with slim.arg_scope(base_arg()):
             feature_map = slim.repeat(feature_map,4,slim.conv2d,num_outputs=256,kernel_size=3,stride=1,scope='classfy_repeat')
             #feature_map = mid_cov(feature_map, 'mid_'+str(ix))
-        out_puts = slim.conv2d(feature_map, config.Config['num_classes'] * 9, kernel_size=3, stride=1,scope='classfy_conv',
+        out_puts = slim.conv2d(feature_map, config.Config['num_classes'] * num_anchors, kernel_size=3, stride=1,scope='classfy_conv',
                                weights_initializer=tf.initializers.zeros,activation_fn=None)
         out_puts = tf.reshape(out_puts,shape=(config.batch_size,-1, config.Config['num_classes']))
         #out_puts = slim.nn.sigmoid(out_puts)
     return out_puts
 
-def regression_model(feature_map,ix):
+def regression_model(feature_map,ix, num_anchors=9):
     with tf.variable_scope('regression'+str(ix), reuse=tf.AUTO_REUSE):
         with slim.arg_scope(base_arg()):
             feature_map = slim.repeat(feature_map, 4, slim.conv2d, num_outputs=256, kernel_size=3, stride=1,
                                       scope='regression_repeat')
-        out_puts = slim.conv2d(feature_map, 4 * 9, kernel_size=3, stride=1,scope='regression',activation_fn=None)
+        out_puts = slim.conv2d(feature_map, 4 * num_anchors, kernel_size=3, stride=1,scope='regression',activation_fn=None)
         out_puts = tf.reshape(out_puts, shape=(config.batch_size,-1, 4))
 
     return out_puts
@@ -105,9 +105,12 @@ def get_box_logits(img,cfg):
     fpns = resnet50.fpn_re(img)
     logits = []
     boxes = []
-    for ix, fp in enumerate(fpns):
-        logits.append(classfy_model(fp,int(ix/3)))
-        boxes.append(regression_model(fp,int(ix/3)))
+    for fp in fpns[0:-1]:
+        logits.append(classfy_model(fp,0))
+        boxes.append(regression_model(fp,0))
+    logits.append(classfy_model(fpns[-1], 1, num_anchors=18))
+    boxes.append(regression_model(fpns[-1], 1, num_anchors=18))
+
     logits = tf.concat(logits, axis=1)
     boxes = tf.concat(boxes, axis=1)
     return boxes,logits,None

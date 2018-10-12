@@ -98,7 +98,13 @@ if config.is_use_group_norm:
 else:
     base_arg = resnet_arg_scope
     second_arg = second_arg_bn
-
+def depwise_cov(x):
+    x1 = slim.conv2d(x, 256, kernel_size=[7, 1], stride=1)
+    x1 = slim.conv2d(x1, 256, kernel_size=[1, 7], stride=1, activation_fn=None)
+    x2 = slim.conv2d(x, 256, kernel_size=[1, 7], stride=1)
+    x2 = slim.conv2d(x2, 256, kernel_size=[7, 1], stride=1, activation_fn=None)
+    x = x1 + x2
+    return x
 
 
 def fpn_re(img):
@@ -111,23 +117,20 @@ def fpn_re(img):
 
     p3 = slim.conv2d(c3, 256, 1, activation_fn=None)
     p3_upsample = tf.image.resize_bilinear(p3, tf.shape(c2)[1:3])
-    p3 = slim.conv2d(p3, 256, 3, rate=2)
-    p3 = slim.conv2d(p3, 256, 3, activation_fn=None)
+    p3 = depwise_cov(p3)
 
     p2 = slim.conv2d(c2, 256, 1, activation_fn=None)
     p2 = p2 + p3_upsample
     p2_upsample = tf.image.resize_bilinear(p2, tf.shape(c1)[1:3])
-    p2 = slim.conv2d(p2, 256, 3, rate=4)
-    p2 = slim.conv2d(p2, 256, 3, activation_fn=None)
+    p2 = depwise_cov(p2)
 
     p1 = slim.conv2d(c1, 256, 1, activation_fn=None)
     p1 = p1 + p2_upsample
-    p1 = slim.conv2d(p1, 256, 3, rate=4)
-    p1 = slim.conv2d(p1, 256, 3, activation_fn=None)
+    p1 = depwise_cov(p1)
 
-    p4 = slim.conv2d(c4,1024,kernel_size=1)
-    p4 = slim.conv2d(p4, 256, 3, rate=2)
-    p4 = slim.conv2d(p4, 256, kernel_size=3, stride=1, activation_fn=None)
+    p4 = slim.conv2d(c4, 512,kernel_size=1)
+    p4 = depwise_cov(p4)
+
     return p1,p2,p3,p4
 
 
