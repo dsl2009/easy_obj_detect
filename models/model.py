@@ -131,6 +131,7 @@ def decode_box(prios,pred_loc,variance=None):
 def predict(ig,pred_loc, pred_confs, vbs,cfg):
     priors = gen_ssd_anchors()
     box = decode_box(prios=priors, pred_loc=pred_loc[0])
+
     props = slim.nn.softmax(pred_confs[0])
     pp = props[:,1:]
     cls = tf.argmax(pp, axis=1)
@@ -140,9 +141,10 @@ def predict(ig,pred_loc, pred_confs, vbs,cfg):
     box = tf.gather(box,ix)
     cls = tf.gather(cls, ix)
     box = tf.clip_by_value(box,clip_value_min=0.0,clip_value_max=1.0)
+    b1 = tf.concat([box[:,1:2],box[:,0:1],box[:,3:],box[:,2:3]],axis=1)
     keep = tf.image.non_max_suppression(
         scores=score,
-        boxes=box,
+        boxes=b1,
         iou_threshold=0.4,
         max_output_size=100
     )

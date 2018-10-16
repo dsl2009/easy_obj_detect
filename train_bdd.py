@@ -22,7 +22,7 @@ def train():
     pred_loc, pred_confs, vbs = get_box_logits(img,config)
     print(pred_loc)
     train_tensors = get_loss(conf, loc, pred_loc, pred_confs,config)
-    gen_bdd = data_gen.get_batch(batch_size=config.batch_size,class_name='bdd_crop',image_size=config.image_size,max_detect=100)
+    gen_bdd = data_gen.get_batch(batch_size=config.batch_size,class_name='bdd',image_size=config.image_size,max_detect=100)
     qq = data_loader_multi.get_thread(gen_bdd,1)
     global_step = slim.get_or_create_global_step()
     lr = tf.train.exponential_decay(
@@ -82,7 +82,7 @@ def detect():
     total_bxx = []
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/nn1012_bdd/model.ckpt-8742')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/bdd11/model.ckpt-153098')
         images_path = sorted(glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/BDD100K/bdd100k/images/100k/val/*.jpg'))
         for ip in images_path:
             print(ip)
@@ -100,7 +100,7 @@ def detect():
             cls = []
             scores = []
             for s in range(len(p)):
-                if sc[s]>=0.5:
+                if sc[s]>=0.4:
                     bxx.append(bx[s])
                     cls.append(p[s])
                     scores.append(sc[s])

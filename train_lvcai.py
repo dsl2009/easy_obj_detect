@@ -1,6 +1,6 @@
 #coding=utf-8
 import tensorflow as tf
-from losses.ret_loss import get_loss
+from losses.ret_nms_loss import get_loss
 from dsl_data import visual
 import config
 from models.dz_model import get_box_logits,predict
@@ -21,17 +21,18 @@ def train():
     pred_loc, pred_confs, vbs = get_box_logits(img,config)
     train_tensors = get_loss(conf, loc, pred_loc, pred_confs,config)
     gen_bdd = data_gen.get_batch(batch_size=config.batch_size,class_name='lvcai',image_size=config.image_size,max_detect=100)
+    q = data_loader_multi.get_thread(gen=gen_bdd,thread_num=1)
     global_step = slim.get_or_create_global_step()
     lr = tf.train.exponential_decay(
         learning_rate=0.001,
         global_step=global_step,
-        decay_steps=40000,
-        decay_rate=0.9,
+        decay_steps=10000,
+        decay_rate=0.7,
         staircase=True)
 
     tf.summary.scalar('lr', lr)
     sum_op = tf.summary.merge_all()
-    optimizer = tf.train.MomentumOptimizer(learning_rate=lr,momentum=0.9)
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate=lr)
     train_op = slim.learning.create_train_op(train_tensors, optimizer)
     vbs = []
     for s in slim.get_variables():
@@ -51,7 +52,7 @@ def train():
         for step in range(20000000):
             print('       '+' '.join(['*']*(step%10)))
 
-            images, true_box, true_label = next(gen_bdd)
+            images, true_box, true_label = q.get()
             try:
                 loct, conft = np_utils.get_loc_conf_new(true_box, true_label, batch_size=config.batch_size,cfg=config.Config)
             except:
@@ -79,7 +80,7 @@ def detect():
     total_bxx = []
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai1/model.ckpt-2020')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/dpnlvcainms/model.ckpt-2946')
         images_path = sorted(glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/r2testb/*.jpg'))
         for ip in images_path:
             print(ip)

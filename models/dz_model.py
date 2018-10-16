@@ -2,7 +2,7 @@ import tensorflow as tf
 from utils.np_utils import gen_ssd_anchors_lvcai,gen_ssd_anchors_new
 from tensorflow.contrib import slim
 import config
-from base_model import resnet50
+from base_model import resnet50,dpn_net
 def mul_channel_arg_scope(weight_decay=0.00004,
                         use_batch_norm=True,
                         batch_norm_decay=0.9997,
@@ -141,9 +141,10 @@ def predict(ig,pred_loc, pred_confs, vbs,cfg):
     box = tf.gather(box,ix)
     cls = tf.gather(cls, ix)
     box = tf.clip_by_value(box,clip_value_min=0.0,clip_value_max=1.0)
+    b1 = tf.concat([box[:, 1:2], box[:, 0:1], box[:, 3:], box[:, 2:3]], axis=1)
     keep = tf.image.non_max_suppression(
         scores=score,
-        boxes=box,
+        boxes=b1,
         iou_threshold=0.4,
         max_output_size=100
     )

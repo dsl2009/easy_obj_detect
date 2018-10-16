@@ -197,8 +197,8 @@ BDD = ['bike', 'bus', 'car', 'motor', 'person', 'rider','traffic light', 'traffi
 
 Tree = ['tree']
 MAX_GT = 100
-batch_size = 8
-image_size = [512,704]
+batch_size = 4
+image_size = [512, 704]
 mask_pool_shape = 28
 norm_value = 2.0
 mask_weight_loss = 2.0
@@ -215,10 +215,10 @@ local_coco_ann = '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/coco/raw-data/
 server_coco_dir = '/data_set/data/train2014'
 server_coco_ann = '/data_set/data/annotations/instances_train2014.json'
 
-local_check = '/home/dsl/all_check/resnet_v2_50_2017_04_14/resnet_v2_50.ckpt'
+local_check = 'log/model.ckpt-6751'
 server_check = '/data_set/check/inception_v2.ckpt'
 
-local_save = '/home/dsl/all_check/obj_detect/lvcai1'
+local_save = '/home/dsl/all_check/obj_detect/dpnlvcainms'
 server_save = '/data_set/check/voc_ssd_yolo'
 
 is_use_group_norm = False
@@ -238,7 +238,7 @@ if flag == 1:
     voc_dir = local_voc_dir
     coco_image_dir = local_coco_dir
     annotations = local_coco_ann
-    batch_size = 8
+    batch_size = 4
 elif flag ==2:
     save_dir = server_save
     check_dir = server_check

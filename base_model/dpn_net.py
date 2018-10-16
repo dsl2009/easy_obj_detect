@@ -4,6 +4,7 @@ import tensorflow as tf
 from torch import nn
 import keras
 from nets import resnet_v2
+from nets import inception_v3
 
 def dpn_arg_scope(weight_decay=0.0001,
                      batch_norm_decay=0.997,
@@ -114,6 +115,7 @@ def dual_path_block(inputs, num_1x1_a, num_3x3_b, num_1x1_c, inc,  groups, block
         return resid, dense
 
 def DPN(inputs, k_r = 96, groups=32, b=False, k_sec=(3, 4, 20, 3), inc_sec = (16, 32, 64,128 )):
+    end_point = {}
     with tf.variable_scope('dpn'):
         with slim.arg_scope(dpn_arg_scope()):
             bw_factor = 1
@@ -127,7 +129,7 @@ def DPN(inputs, k_r = 96, groups=32, b=False, k_sec=(3, 4, 20, 3), inc_sec = (16
             for i in range(2, k_sec[0] + 1):
                 net = dual_path_block(net, num_1x1_a=r, num_3x3_b=r, num_1x1_c=bw, inc=inc, groups=groups,
                                       block_type='normal', b=b, scope='cov2_norm_'+str(i))
-
+            end_point['conv2'] = tf.concat(net, axis=3)
             # conv3
             bw = 128 * bw_factor
             inc = inc_sec[1]
@@ -137,7 +139,7 @@ def DPN(inputs, k_r = 96, groups=32, b=False, k_sec=(3, 4, 20, 3), inc_sec = (16
             for i in range(2, k_sec[1] + 1):
                 net = dual_path_block(net, num_1x1_a=r, num_3x3_b=r, num_1x1_c=bw, inc=inc, groups=groups,
                                       block_type='normal', b=b, scope='cov3_norm_'+str(i))
-
+            end_point['conv3'] = tf.concat(net, axis=3)
             # conv4
             bw = 256 * bw_factor
             inc = inc_sec[2]
@@ -147,7 +149,7 @@ def DPN(inputs, k_r = 96, groups=32, b=False, k_sec=(3, 4, 20, 3), inc_sec = (16
             for i in range(2, k_sec[2] + 1):
                 net = dual_path_block(net, num_1x1_a=r, num_3x3_b=r, num_1x1_c=bw, inc=inc, groups=groups,
                                       block_type='normal', b=b, scope='cov4_norm_'+str(i))
-
+            end_point['conv4'] = tf.concat(net, axis=3)
             # conv5
             bw = 512 * bw_factor
             inc = inc_sec[3]
@@ -158,17 +160,49 @@ def DPN(inputs, k_r = 96, groups=32, b=False, k_sec=(3, 4, 20, 3), inc_sec = (16
                 net = dual_path_block(net, num_1x1_a=r, num_3x3_b=r, num_1x1_c=bw, inc=inc, groups=groups,
                                       block_type='normal',
                                       b=b, scope='cov5_norm_'+str(i))
+            end_point['conv5'] = tf.concat(net, axis=3)
             net = cat_bn_act(net)
-            return net
+            return net,end_point
 
 def logist(inputs, num_class):
-    net = DPN(inputs, k_r = 128, groups=32, b=False, k_sec=([3, 4, 6, 3]), inc_sec = (16, 32, 24, 64 ))
+    net,_ = DPN(inputs, k_r = 128, groups=32, b=False, k_sec=([3, 4, 6, 3]), inc_sec = (16, 32, 24, 64 ))
     B, H, W, C = net.shape.as_list()
     net = slim.avg_pool2d(net, kernel_size=(H,W))
     log= slim.flatten(net)
     pred = slim.fully_connected(log, num_outputs=num_class)
     return pred
 
+def depwise_cov(x):
+    x1 = slim.conv2d(x, 256, kernel_size=[7, 1], stride=1)
+    x1 = slim.conv2d(x1, 256, kernel_size=[1, 7], stride=1, activation_fn=None)
+    x2 = slim.conv2d(x, 256, kernel_size=[1, 7], stride=1)
+    x2 = slim.conv2d(x2, 256, kernel_size=[7, 1], stride=1, activation_fn=None)
+    x = x1 + x2
+    return x
 
+def fpn_re(img):
+    net, endpoint = DPN(img, k_r=128, groups=32, b=False, k_sec=([3, 4, 6, 3]), inc_sec=(16, 32, 24, 64))
+    print(endpoint)
 
+    c1 = endpoint['conv3']
+    c2 = endpoint['conv4']
+    c3 = endpoint['conv5']
 
+    p3 = slim.conv2d(c3, 256, 1, activation_fn=None)
+    p3_upsample = tf.image.resize_bilinear(p3, tf.shape(c2)[1:3])
+    p3 = depwise_cov(p3)
+
+    p2 = slim.conv2d(c2, 256, 1, activation_fn=None)
+    p2 = p2 + p3_upsample
+    p2_upsample = tf.image.resize_bilinear(p2, tf.shape(c1)[1:3])
+    p2 = depwise_cov(p2)
+
+    p1 = slim.conv2d(c1, 256, 1, activation_fn=None)
+    p1 = p1 + p2_upsample
+    p1 = depwise_cov(p1)
+
+    p4 = slim.conv2d(c3, 512,kernel_size=1)
+    p4 = slim.conv2d(c3, 256, kernel_size=3,stride=2)
+    p4 = depwise_cov(p4)
+
+    return p1,p2,p3,p4

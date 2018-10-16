@@ -36,6 +36,14 @@ def pt_from(boxes):
     xy_max = boxes[:, :2] + boxes[:, 2:] / 2
     return np.hstack([xy_min,xy_max])
 
+def pt_from_nms(boxes):
+    y_min = boxes[:, 1:2] - boxes[:, 3:] / 2
+    y_max = boxes[:, 1:2] + boxes[:, 3:] / 2
+    x_min = boxes[:, 0:1] - boxes[:, 2:3] / 2
+    x_max = boxes[:, 0:1] + boxes[:, 2:3] / 2
+
+    return np.hstack([y_min,x_min, y_max, x_max])
+
 def encode(matched, priors, variances):
 
     # dist b/t match center and prior's center
@@ -154,13 +162,14 @@ def gen_ssd_anchors_new():
     return out
 
 def gen_ssd_anchors_lvcai():
-    size = [16, 32, 64]
+    r = 1
+    size = [16*r, 32*r, 64*r]
     feature_stride = [8, 16, 32, 64]
     ratios = [[0.5, 1, 2, 4, 8,16, 32], [0.5, 1, 2, 4, 8,16, 32], [0.5, 1, 2, 4, 8,16, 32], [0.5, 1, 2, 4, 8,16, 32]]
     scals = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
     sc = [[s * scals[0], s * scals[1], s * scals[2]] for s in size]
 
-    sc.append([128, 196, 256, 384, 512])
+    sc.append([128*r, 196*r, 256*r, 384*r, 512*r])
     shape = [(config.image_size[0] / x, config.image_size[1] / x) for x in feature_stride]
     anchors = gen_multi_anchors(scales=sc, ratios=ratios, shape=shape, feature_stride=feature_stride)
     anchors = anchors / np.asarray(
