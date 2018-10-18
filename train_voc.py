@@ -1,6 +1,6 @@
 #coding=utf-8
 import tensorflow as tf
-from losses.ret_loss import get_loss
+from losses.ret_nms_loss import get_loss
 from dsl_data import visual
 import config
 from models.dz_model import get_box_logits,predict
@@ -37,7 +37,6 @@ def train():
     train_op = slim.learning.create_train_op(train_tensors, optimizer)
     vbs = []
     for s in slim.get_variables():
-        print(s.name)
         if 'resnet_v2_50' in s.name and 'Momentum' not in s.name and 'GroupNorm' not in s.name:
             print(s.name)
             vbs.append(s)
@@ -81,8 +80,8 @@ def detect():
     total_bxx = []
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/nn1012_voc/model.ckpt-9364')
-        images_path = sorted(glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/VOCdevkit/VOCdevkit/VOC2012/JPEGImages/*.jpg'))
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/voc_f_bn/model.ckpt-6954')
+        images_path = glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/VOCdevkit/VOCdevkit/VOC2007/JPEGImages/*.jpg')
         for ip in images_path:
             print(ip)
             img = cv2.imread(ip)

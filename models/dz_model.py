@@ -1,5 +1,5 @@
 import tensorflow as tf
-from utils.np_utils import gen_ssd_anchors_lvcai,gen_ssd_anchors_new
+from utils.np_utils import gen_ssd_anchors_lvcai,gen_ssd_anchors
 from tensorflow.contrib import slim
 import config
 from base_model import resnet50,dpn_net
@@ -102,15 +102,12 @@ def hebing(feature_map,scope):
 
 
 def get_box_logits(img,cfg):
-    fpns = resnet50.fpn_re(img)
+    fpns = resnet50.fpn(img)
     logits = []
     boxes = []
-    for fp in fpns[0:-1]:
-        logits.append(classfy_model(fp,0, 21))
-        boxes.append(regression_model(fp,0, 21))
-    logits.append(classfy_model(fpns[-1], 1, num_anchors=35))
-    boxes.append(regression_model(fpns[-1], 1, num_anchors=35))
-
+    for fp in fpns:
+        logits.append(classfy_model(fp,0, 18))
+        boxes.append(regression_model(fp,0, 18))
     logits = tf.concat(logits, axis=1)
     boxes = tf.concat(boxes, axis=1)
     return boxes,logits,None

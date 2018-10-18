@@ -119,7 +119,7 @@ def gen_ssd_anchors1():
     return out
 
 def gen_ssd_anchors():
-    if config.is_use_last:
+    if False:
         size = [16, 32, 64, 128, 256, 512]
         #size = [24, 48, 96, 192, 384, 600]
         feature_stride = [8, 16, 32, 64, 128, 256]
@@ -152,7 +152,7 @@ def gen_ssd_anchors_new():
     scals = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
     sc = [[s * scals[0], s * scals[1], s * scals[2]] for s in size]
 
-    sc.append([128, 196, 256, 384, 512, 600])
+    sc.append([128, 196, 256, 384, 512])
     shape = [(config.image_size[0] / x, config.image_size[1] / x) for x in feature_stride]
     anchors = gen_multi_anchors(scales=sc, ratios=ratios, shape=shape, feature_stride=feature_stride)
     anchors = anchors / np.asarray(
@@ -162,18 +162,28 @@ def gen_ssd_anchors_new():
     return out
 
 def gen_ssd_anchors_lvcai():
-    r = 1
-    size = [16*r, 32*r, 64*r]
-    feature_stride = [8, 16, 32, 64]
-    ratios = [[0.5, 1, 2, 4, 8,16, 32], [0.5, 1, 2, 4, 8,16, 32], [0.5, 1, 2, 4, 8,16, 32], [0.5, 1, 2, 4, 8,16, 32]]
-    scals = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
-    sc = [[s * scals[0], s * scals[1], s * scals[2]] for s in size]
+    r = 1.0
+    if False:
+        size = [16, 32, 64, 128, 256, 512]
+        #size = [24, 48, 96, 192, 384, 600]
+        feature_stride = [8, 16, 32, 64, 128, 256]
+        ratios = [[0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2]]
+    else:
+        size = [24*r, 48*r, 96*r, 192*r, 384*r]
+        feature_stride = [8, 16, 32, 64, 128]
+        ratios = [[0.5, 1, 2, 8, 16, 32], [0.5, 1, 2, 8, 16, 32], [0.5, 1, 2, 8, 16, 32], [0.5, 1, 2, 8, 16, 32], [0.5, 1, 2, 8, 16, 32]]
+    if config.total_fpn!=-1:
+        size = size[0:config.total_fpn]
+        feature_stride = feature_stride[0:config.total_fpn]
+        ratios = ratios[0:config.total_fpn]
 
-    sc.append([128*r, 196*r, 256*r, 384*r, 512*r])
-    shape = [(config.image_size[0] / x, config.image_size[1] / x) for x in feature_stride]
-    anchors = gen_multi_anchors(scales=sc, ratios=ratios, shape=shape, feature_stride=feature_stride)
-    anchors = anchors / np.asarray(
-        [config.image_size[1], config.image_size[0], config.image_size[1], config.image_size[0]])
+    scals = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
+    sc = [(s * scals[0], s * scals[1], s * scals[2]) for s in size]
+
+
+    shape = [(config.image_size[0]/x, config.image_size[1]/x) for x in feature_stride]
+    anchors = gen_multi_anchors(scales=sc,ratios=ratios,shape=shape,feature_stride=feature_stride)
+    anchors = anchors/np.asarray([config.image_size[1],config.image_size[0], config.image_size[1], config.image_size[0]])
     out = np.clip(anchors, a_min=0.0, a_max=1.0)
 
     return out
@@ -193,7 +203,7 @@ def gen_anchors_single():
     out = np.clip(anchors, a_min=0.0, a_max=1.0)
     return out
 
-def get_loc_conf(true_box, true_label,batch_size = 4,cfg = config.voc_vgg_300):
+def get_loc_conf(true_box, true_label,batch_size = 4,cfg =None):
     pri = gen_ssd_anchors()
     num_priors = pri.shape[0]
     loc_t = np.zeros([batch_size, num_priors, 4])
@@ -219,7 +229,7 @@ def get_loc_conf(true_box, true_label,batch_size = 4,cfg = config.voc_vgg_300):
         conf_t[s] = conf
     return loc_t,conf_t
 
-def get_loc_conf_new(true_box, true_label,batch_size = 4,cfg = config.voc_vgg_300):
+def get_loc_conf_new(true_box, true_label,batch_size = 4,cfg = None):
     pri = gen_ssd_anchors_lvcai()
     num_priors = pri.shape[0]
     loc_t = np.zeros([batch_size, num_priors, 4])
@@ -243,7 +253,7 @@ def get_loc_conf_new(true_box, true_label,batch_size = 4,cfg = config.voc_vgg_30
         conf = labels[best_true_idx] + 1
         conf[best_true <= 0.3] = 0
         b1 = best_true>0.3
-        b2 = best_true<=0.5
+        b2 = best_true<=0.6
         conf[b1*b2] = -1
         loc = encode(matches, pri, variances=[0.1, 0.2])
         loc_t[s] = loc
@@ -262,7 +272,7 @@ def revert_image(scale,padding,image_size,box):
     box = np.asarray(box,dtype=np.int32)
     return box
 
-def get_loc_conf_mask(true_box, true_label,batch_size = 4,cfg = config.voc_vgg_300):
+def get_loc_conf_mask(true_box, true_label,batch_size = 4,cfg  = None):
 
     #pri = get_prio_box(cfg = cfg)
     pri = gen_ssd_anchors()
@@ -305,7 +315,50 @@ def get_loc_conf_mask(true_box, true_label,batch_size = 4,cfg = config.voc_vgg_3
 
 
 
+def build_rpn_targets(true_box, true_label,batch_size = 4,cfg = None):
+    rpn_nums = 256
+    anchors = gen_ssd_anchors()
+    num_priors = anchors.shape[0]
+    rpn_box = np.zeros([batch_size, num_priors, 4])
+    rpn_labels = np.zeros([batch_size, num_priors])
+    for s in range(batch_size):
+        true_box_tm = true_box[s]
+        labels = true_label[s]
+        ix = (true_box_tm[:, 2] - true_box_tm[:, 0]) * (true_box_tm[:, 3] - true_box_tm[:, 1])
+        true_box_tm = true_box_tm[np.where(ix > 1e-6)]
+        labels = labels[np.where(ix > 1e-6)]
+        overlaps = over_laps(true_box_tm, pt_from(anchors))
+        anchor_iou_argmax = np.argmax(overlaps, axis=1)
+        anchor_iou_max = overlaps[np.arange(overlaps.shape[0]), anchor_iou_argmax]
+        gt_iou_argmax = np.argmax(overlaps, axis=0)
+        ops = over_laps(true_box_tm, pt_from(anchors))
+        best_true = np.max(ops, axis=0)
+        best_true_idx = np.argmax(ops, axis=0)
+        best_prior = np.max(ops, axis=1)
+        best_prior_idx = np.argmax(ops, axis=1)
+        for j in range(best_prior_idx.shape[0]):
+            best_true_idx[best_prior_idx[j]] = j
+            best_true[best_prior_idx[j]] = 1.0
 
+        matches = true_box_tm[best_true_idx]
+        conf = labels[best_true_idx] + 1
+        conf[best_true>0.7] = 1
+        conf[best_true <= 0.3] = 0
+        b1 = best_true > 0.3
+        b2 = best_true <= 0.7
+        conf[b1 * b2] = -1
+        cho = np.where(conf==0)[0]
+        np.random.shuffle(cho)
+        pos_num = len(np.where(conf>0)[0])
+        ne_num = rpn_nums - pos_num
+        n_idx = cho[ne_num:]
+        conf[n_idx] = -1
+
+        loc = encode(matches, anchors, variances=[0.1, 0.2])
+
+        rpn_box[s] = loc
+        rpn_labels[s] = conf
+    return rpn_labels, rpn_box
 
 
 

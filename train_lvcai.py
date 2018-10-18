@@ -19,6 +19,8 @@ def train():
     loc = tf.placeholder(shape=[config.batch_size, config.total_anchor_num, 4], dtype=tf.float32)
     conf = tf.placeholder(shape=[config.batch_size, config.total_anchor_num], dtype=tf.float32)
     pred_loc, pred_confs, vbs = get_box_logits(img,config)
+    print(pred_loc)
+
     train_tensors = get_loss(conf, loc, pred_loc, pred_confs,config)
     gen_bdd = data_gen.get_batch(batch_size=config.batch_size,class_name='lvcai',image_size=config.image_size,max_detect=100)
     q = data_loader_multi.get_thread(gen=gen_bdd,thread_num=1)
@@ -71,7 +73,7 @@ def train():
 
 def detect():
     config.batch_size = 1
-    #config.image_size = [960, 1280]
+    config.image_size = [960, 1280]
     imgs = tf.placeholder(shape=(1, config.image_size[0], config.image_size[1], 3), dtype=tf.float32)
     #ig = AddCoords(x_dim=512, y_dim=512)(imgs)
     pred_loc, pred_confs, vbs = get_box_logits(imgs,config)
@@ -80,7 +82,7 @@ def detect():
     total_bxx = []
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/dpnlvcainms/model.ckpt-2946')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_f_bn_960_2/model.ckpt-7795')
         images_path = sorted(glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/r2testb/*.jpg'))
         for ip in images_path:
             print(ip)

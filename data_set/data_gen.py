@@ -3,7 +3,7 @@ import numpy as np
 import config
 from dsl_data import aug_utils
 from dsl_data import xair_guoshu, mianhua, bdd, voc, Lucai
-def get_batch(batch_size,class_name, is_shuff = True,max_detect = 50,image_size=300):
+def get_batch(batch_size,class_name, is_shuff = True,max_detect = 50,image_size=300, is_rcnn = False):
     if class_name == 'guoshu':
         data_set = xair_guoshu.Tree('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/xair/guoshu/data',
                                     config.image_size)
@@ -40,6 +40,8 @@ def get_batch(batch_size,class_name, is_shuff = True,max_detect = 50,image_size=
                 if index >= length:
                     index = 0
                 continue
+            if is_rcnn:
+                lab = np.asarray(lab)+1
             if True:
 
                 if random.randint(0,1)==1:

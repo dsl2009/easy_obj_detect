@@ -13,10 +13,10 @@ def resnet_arg_scope_batch_norm(weight_decay=0.0001,
       'decay': batch_norm_decay,
       'epsilon': batch_norm_epsilon,
       'scale': batch_norm_scale,
+      'trainable':False,
       'updates_collections': tf.GraphKeys.UPDATE_OPS,
       'fused': None,  # Use fused batch norm if possible.
   }
-
   with slim.arg_scope(
       [slim.conv2d],
       weights_regularizer=slim.l2_regularizer(weight_decay),
@@ -96,7 +96,7 @@ if config.is_use_group_norm:
     base_arg = resnet_arg_scope_group_norm
     second_arg = second_arg_gn
 else:
-    base_arg = resnet_arg_scope
+    base_arg = resnet_arg_scope_batch_norm
     second_arg = second_arg_bn
 def depwise_cov(x):
     x1 = slim.conv2d(x, 256, kernel_size=[7, 1], stride=1)
@@ -166,12 +166,7 @@ def fpn(img):
         p7 = slim.nn.relu(p6)
         p7 = slim.conv2d(p7, 256, kernel_size=3, stride=2, activation_fn=None)
 
-        if config.is_use_last:
-            p8 = slim.nn.relu(p7)
-            p8 = slim.conv2d(p7, 256, kernel_size=3, stride=2, activation_fn=None)
-            bn = [p3, p4, p5, p6, p7,p8]
-        else:
-            bn = [p3, p4, p5, p6, p7]
-        if config.total_fpn!=-1:
-            bn = bn[0:config.total_fpn]
+
+        bn = [p3, p4, p5, p6, p7]
+
         return bn
