@@ -19,7 +19,6 @@ def train():
     loc = tf.placeholder(shape=[config.batch_size, config.total_anchor_num, 4], dtype=tf.float32)
     conf = tf.placeholder(shape=[config.batch_size, config.total_anchor_num], dtype=tf.float32)
     pred_loc, pred_confs, vbs = get_box_logits(img,config)
-    print(pred_loc)
 
     train_tensors = get_loss(conf, loc, pred_loc, pred_confs,config)
     gen_bdd = data_gen.get_batch(batch_size=config.batch_size,class_name='lvcai',image_size=config.image_size,max_detect=100)

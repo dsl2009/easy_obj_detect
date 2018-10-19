@@ -346,6 +346,7 @@ def log2_graph(x):
 
 
 def roi_align(boxes,feature_maps,cfg):
+    #p1 p2 p3 p4 p4
 
     # Assign each ROI to a level in the pyramid based on the ROI area.
     y1, x1, y2, x2 = tf.split(boxes, 4, axis=2)
@@ -357,16 +358,16 @@ def roi_align(boxes,feature_maps,cfg):
     # the fact that our coordinates are normalized here.
     # e.g. a 224x224 ROI (in pixels) maps to P4
     image_area = tf.cast(image_shape[0] * image_shape[1], tf.float32)
-    roi_level = log2_graph(tf.sqrt(h * w) / (224.0 / tf.sqrt(image_area)))
+    roi_level = log2_graph(tf.sqrt(h * w) / (24.0 / tf.sqrt(image_area)))
+    roi_level = tf.cast(tf.round(roi_level), tf.int32)
+    roi_level = tf.clip_by_value(roi_level, clip_value_min=0, clip_value_max=4)
 
-    roi_level = tf.minimum(2, tf.maximum(
-        0, 1 + tf.cast(tf.round(roi_level), tf.int32)))
     roi_level = tf.squeeze(roi_level, 2)
 
     # Loop through levels and apply ROI pooling to each. P2 to P5.
     pooled = []
     box_to_level = []
-    for i, level in enumerate(range(3)):
+    for i, level in enumerate(range(5)):
         ix = tf.where(tf.equal(roi_level, level))
         level_boxes = tf.gather_nd(boxes, ix)
 
@@ -448,11 +449,11 @@ def refine_detections_graph(rois, probs, deltas,window,cfg):
     class_scores = tf.reduce_max(probs, axis=1)
     # Class probability of the top class of each ROI
 
-    ix = tf.range(cfg.NMS_ROIS_TRAINING)
-    idece = tf.stack([ix,class_ids],axis=1)
+    #ix = tf.range(cfg.NMS_ROIS_TRAINING)
+    #idece = tf.stack([ix,class_ids],axis=1)
 
-    deltas_specific = tf.gather_nd(deltas,idece)
-
+    #deltas_specific = tf.gather_nd(deltas,idece)
+    deltas_specific = deltas
 
 
     refined_rois = apply_box_deltas_graph(

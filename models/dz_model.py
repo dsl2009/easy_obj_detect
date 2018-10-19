@@ -2,7 +2,7 @@ import tensorflow as tf
 from utils.np_utils import gen_ssd_anchors_lvcai,gen_ssd_anchors
 from tensorflow.contrib import slim
 import config
-from base_model import resnet50,dpn_net
+from base_model import resnet50
 def mul_channel_arg_scope(weight_decay=0.00004,
                         use_batch_norm=True,
                         batch_norm_decay=0.9997,

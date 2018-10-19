@@ -90,7 +90,7 @@ def detection_target(input_proposals, input_gt_class_ids, input_gt_boxes):
         positive_roi_bool = (roi_iou_max >= 0.5)
         positive_indices = tf.where(positive_roi_bool)[:, 0]
 
-        negative_indices = tf.where(roi_iou_max < 0.5)[:, 0]
+        negative_indices = tf.where(roi_iou_max < 0.4)[:, 0]
         #TRAIN_ROIS_PER_IMAGE =200 ROI_POSITIVE_RATIO=0.33
 
         positive_count = int(cfg.TRAIN_ROIS_PER_IMAGE * cfg.ROI_POSITIVE_RATIO)
@@ -135,18 +135,14 @@ def fpn_classifier_graph(rois, feature_maps):
     x = slim.flatten(x)
     mrcnn_class_logits = slim.fully_connected(x, cfg.num_class)
     mrcnn_probs = slim.softmax(mrcnn_class_logits)
-
+    '''
     x = slim.fully_connected(x, cfg.num_class * 4)
     mrcnn_bbox = tf.reshape(x, shape=(-1, cfg.num_class, 4))
+    '''
+    x = slim.fully_connected(x,  4)
+    mrcnn_bbox = tf.reshape(x, shape=(-1, 4))
     return mrcnn_class_logits, mrcnn_probs, mrcnn_bbox
 
-def tt():
-    fp = resnet50.fpn(x1)
-    rpn_class_logits, rpn_probs, rpn_bbox = get_rpns(fp)
-    propsal_box = propsal(rpn_probs, rpn_bbox)
-    print(rpn_bbox)
-    print(rpn_class_logits)
-    print(propsal_box)
 
 
 def get_train_tensor(images, input_rpn_match,input_rpn_bbox, gt_label, gt_boxs):
@@ -163,7 +159,7 @@ def get_train_tensor(images, input_rpn_match,input_rpn_bbox, gt_label, gt_boxs):
 
     class_loss = losses.mrcnn_class_loss_graph(target_class_ids, rcnn_class_logits)
 
-    bbox_loss = losses.mrcnn_bbox_loss_graph(target_deltas, target_class_ids, rcnn_bbox_deltas)
+    bbox_loss = losses.mrcnn_bbox_loss_graph_dsl(target_deltas, target_class_ids, rcnn_bbox_deltas)
 
     tf.losses.add_loss(rpn_class_loss)
     tf.losses.add_loss(rpn_bbox_loss)

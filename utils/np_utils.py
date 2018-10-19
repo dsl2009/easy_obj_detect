@@ -350,7 +350,7 @@ def build_rpn_targets(true_box, true_label,batch_size = 4,cfg = None):
         cho = np.where(conf==0)[0]
         np.random.shuffle(cho)
         pos_num = len(np.where(conf>0)[0])
-        ne_num = rpn_nums - pos_num
+        ne_num = pos_num*3
         n_idx = cho[ne_num:]
         conf[n_idx] = -1
 

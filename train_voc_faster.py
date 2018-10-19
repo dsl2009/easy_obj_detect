@@ -11,7 +11,7 @@ import numpy as np
 import time
 from data_set import data_gen
 from dsl_data.utils import resize_image_fixed_size
-
+from faster_rcnn_config import config_instace as cfg
 import config
 from models import fpn_faster_rcnn
 def train():
@@ -95,13 +95,14 @@ def train():
 
 def detect():
     config.batch_size = 1
+    cfg.NMS_ROIS_TRAINING = 1000
     ig = tf.placeholder(shape=(1, 512, 512, 3), dtype=tf.float32)
     wind = tf.placeholder(shape=(4, 1), dtype=tf.float32)
     detections = fpn_faster_rcnn.predict(images=ig, window=wind)
     saver = tf.train.Saver()
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/faster/model.ckpt-16505')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/faster09/model.ckpt-15417')
         for ip in glob.glob(
                 '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/VOCdevkit/VOCdevkit/VOC2007/JPEGImages/*.jpg'):
             print(ip)
@@ -126,9 +127,18 @@ def detect():
             visual.display_instances_title(org, np.asarray(boxes) * 512, class_ids=label,
                                            class_names=config.VOC_CLASSES, scores=score, is_faster=True)
 
+def tt():
+    gen_bdd = data_gen.get_batch(batch_size=config.batch_size, class_name='voc', image_size=config.image_size,
+                                 max_detect=100, is_rcnn=True)
 
+    for step in range(20000000):
+        print('       ' + ' '.join(['*'] * (step % 10)))
 
-
+        images, true_box, true_label = next(gen_bdd)
+        print(np.where(true_label>0))
+        rpn_label, rpn_box = np_utils.build_rpn_targets(true_box, true_label, batch_size=config.batch_size,
+                                                        cfg=config.Config)
+        print(np.where(rpn_label==1))
 
 
 

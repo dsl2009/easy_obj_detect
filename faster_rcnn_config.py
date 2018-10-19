@@ -28,9 +28,9 @@ class Cfg(object):
                        'sheep', 'sofa', 'train', 'tvmonitor')
 
         self.TRAIN_ROIS_PER_IMAGE = 200
-        self.DETECTION_MIN_CONFIDENCE = 0.5
+        self.DETECTION_MIN_CONFIDENCE = 0.3
         self.DETECTION_MAX_INSTANCES = 100
-        self.DETECTION_NMS_THRESHOLD = 0.3
+        self.DETECTION_NMS_THRESHOLD = 0.2
         self.pool_shape = 7
         self.ROI_POSITIVE_RATIO = 0.33
         if is_train:

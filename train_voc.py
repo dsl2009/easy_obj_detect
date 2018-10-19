@@ -80,7 +80,7 @@ def detect():
     total_bxx = []
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/voc_f_bn/model.ckpt-6954')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/voc_nms/model.ckpt-47306')
         images_path = glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/VOCdevkit/VOCdevkit/VOC2007/JPEGImages/*.jpg')
         for ip in images_path:
             print(ip)

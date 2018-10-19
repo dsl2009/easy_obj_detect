@@ -26,6 +26,20 @@ def rpn_class_loss_graph(rpn_match, rpn_class_logits):
     loss = tf.keras.backend.switch(tf.cast(tf.size(loss) > 0,tf.bool), tf.reduce_mean(loss), tf.constant(0.0))
     return loss
 
+def rpn_class_loss_graph1(rpn_match, rpn_class_logits):
+
+
+    anchor_class = tf.cast(tf.equal(rpn_match, 1), tf.int32)
+
+    indices = tf.where(tf.not_equal(rpn_match, -1))
+
+
+
+    rpn_class_logits = tf.gather_nd(rpn_class_logits, indices)
+    anchor_class = tf.gather_nd(anchor_class, indices)
+    loss = soft_focal_loss(labels=anchor_class,logits=rpn_class_logits ,number_cls=2)
+    loss = tf.keras.backend.switch(tf.cast(tf.size(loss) > 0,tf.bool), tf.reduce_mean(loss), tf.constant(0.0))
+    return loss
 
 def rpn_bbox_loss_graph( input_rpn_deltas, input_rpn_label, pred_rpn_deltas):
 
@@ -78,3 +92,20 @@ def mrcnn_bbox_loss_graph(target_bbox, target_class_ids, pred_bbox):
     loss = tf.reduce_mean(loss)
     return loss
 
+def mrcnn_bbox_loss_graph_dsl(target_bbox, target_class_ids, pred_bbox):
+
+    target_class_ids = tf.reshape(target_class_ids, (-1,))
+    target_bbox = tf.reshape(target_bbox, (-1, 4))
+
+    positive_roi_ix = tf.where(target_class_ids > 0)[:, 0]
+    positive_roi_class_ids = tf.cast(
+        tf.gather(target_class_ids, positive_roi_ix), tf.int64)
+
+    target_bbox = tf.gather(target_bbox, positive_roi_ix)
+    pred_bbox = tf.gather(pred_bbox, positive_roi_ix)
+
+    loss = tf.keras.backend.switch(tf.cast(tf.size(target_bbox) > 0,tf.bool),
+                    smooth_l1_loss(y_true=target_bbox, y_pred=pred_bbox),
+                    tf.constant(0.0))
+    loss = tf.reduce_mean(loss)
+    return loss
