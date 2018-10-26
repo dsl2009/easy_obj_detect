@@ -13,6 +13,7 @@ from data_set import data_gen
 from dsl_data.utils import resize_image_fixed_size
 from faster_rcnn_config import config_instace as cfg
 import config
+from dsl_data import data_loader_multi
 from models import fpn_faster_rcnn
 def train():
     pl_images = tf.placeholder(shape=[config.batch_size, config.image_size[0], config.image_size[1], 3], dtype=tf.float32)
@@ -21,11 +22,11 @@ def train():
     pl_input_rpn_match = tf.placeholder(shape=[config.batch_size, config.total_anchor_num], dtype=tf.int32)
     pl_input_rpn_bbox = tf.placeholder(shape=[config.batch_size, config.total_anchor_num, 4], dtype=tf.float32)
 
-    train_tensors, ta_gt = fpn_faster_rcnn.get_train_tensor(pl_images,  pl_input_rpn_match,pl_input_rpn_bbox, pl_label,pl_gt_boxs)
+    train_tensors, ta_gt, _ = fpn_faster_rcnn.get_train_tensor(pl_images,  pl_input_rpn_match,pl_input_rpn_bbox, pl_label,pl_gt_boxs)
 
-    gen_bdd = data_gen.get_batch(batch_size=config.batch_size, class_name='voc', image_size=config.image_size,
+    gen_bdd = data_gen.get_batch(batch_size=config.batch_size, class_name='lvcai', image_size=config.image_size,
                                  max_detect=100,is_rcnn=True)
-
+    q = data_loader_multi.get_thread(gen_bdd,2)
     global_step = slim.get_or_create_global_step()
     lr = tf.train.exponential_decay(
         learning_rate=0.001,
@@ -57,7 +58,7 @@ def train():
         for step in range(20000000):
             print('       ' + ' '.join(['*'] * (step % 10)))
 
-            images, true_box, true_label = next(gen_bdd)
+            images, true_box, true_label = q.get()
 
 
             rpn_label, rpn_box = np_utils.build_rpn_targets(true_box, true_label, batch_size=config.batch_size,
@@ -84,10 +85,10 @@ def train():
 
             if step % 10 == 0:
                 print('step:' + str(step) +
-                      ' ' + 'rpn_class_loss:' + str(ls[0]) +
-                      ' ' + 'rpn_loc_loss:' + str(ls[1])+
-                      ' ' + 'class_loss:' + str(ls[2])+
-                      ' ' + 'loc_loss:' + str(ls[3])
+                      ' ' + 'rpn_class_loss:' + str(tg[0]) +
+                      ' ' + 'rpn_loc_loss:' + str(tg[1])+
+                      ' ' + 'class_loss:' + str(tg[2])+
+                      ' ' + 'total_loss:' + str(ls)
                       )
                 summaries = sess.run(sum_op, feed_dict=feed_dict)
                 sv.summary_computed(sess, summaries)
@@ -96,15 +97,15 @@ def train():
 def detect():
     config.batch_size = 1
     cfg.NMS_ROIS_TRAINING = 1000
-    ig = tf.placeholder(shape=(1, 512, 512, 3), dtype=tf.float32)
+    ig = tf.placeholder(shape=(1, config.image_size[0], config.image_size[1], 3), dtype=tf.float32)
     wind = tf.placeholder(shape=(4, 1), dtype=tf.float32)
     detections = fpn_faster_rcnn.predict(images=ig, window=wind)
     saver = tf.train.Saver()
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/faster09/model.ckpt-15417')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_faster/model.ckpt-4541')
         for ip in glob.glob(
-                '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/VOCdevkit/VOCdevkit/VOC2007/JPEGImages/*.jpg'):
+                '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/r2testb/*.jpg'):
             print(ip)
             img = cv2.imread(ip)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -118,14 +119,49 @@ def detect():
             t = time.time()
             detects = sess.run([detections], feed_dict={ig: img, wind: window})
             arr = detects[0]
+            print(arr.shape)
+
             ix = np.where(np.sum(arr, axis=1) > 0)
+
             box = arr[ix]
             boxes = box[:, 0:4]
             label = box[:, 4]
             score = box[:, 5]
             label = np.asarray(label, np.int32)-1
-            visual.display_instances_title(org, np.asarray(boxes) * 512, class_ids=label,
+            print(boxes)
+            print(label)
+            visual.display_instances_title(org, np.asarray(boxes) * 896, class_ids=label,
                                            class_names=config.VOC_CLASSES, scores=score, is_faster=True)
+def detect1():
+    config.batch_size = 1
+    cfg.NMS_ROIS_TRAINING = 1000
+    ig = tf.placeholder(shape=(1, config.image_size[0], config.image_size[1], 3), dtype=tf.float32)
+    wind = tf.placeholder(shape=(4, 1), dtype=tf.float32)
+    bbox, scores, classes = fpn_faster_rcnn.predict(images=ig, window=wind)
+    saver = tf.train.Saver()
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/new_faster/model.ckpt-5631')
+        for ip in glob.glob(
+                '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/r2testb/*.jpg'):
+            print(ip)
+            img = cv2.imread(ip)
+            imges = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            org, window, scale, padding, crop = resize_image_fixed_size(imges,config.image_size)
+            window = np.asarray(window) / config.image_size[0] * 1.0
+
+            window = np.reshape(window, [4, 1])
+
+            img = org - [123.15, 115.90, 103.06]
+            img = np.expand_dims(img, axis=0)
+            t = time.time()
+            p_box, p_score, p_class = sess.run([bbox, scores, classes], feed_dict={ig: img, wind: window})
+            if p_box.shape[0] > 0:
+                #bxx = np.asarray(bxx)*np.asarray([config.image_size[1],config.image_size[0],config.image_size[1],config.image_size[0]])
+                #visual.display_instances_title(org, np.asarray(bxx), class_ids=np.asarray(cls),class_names=config.VOC_CLASSES,scores=scores)
+                bxx = np_utils.revert_image(scale, padding, config.image_size, p_box)
+                visual.display_instances_title(imges, bxx, class_ids=np.asarray(p_class),class_names=config.Lvcai,scores=p_score)
+
 
 def tt():
     gen_bdd = data_gen.get_batch(batch_size=config.batch_size, class_name='voc', image_size=config.image_size,
@@ -142,4 +178,4 @@ def tt():
 
 
 
-train()
+detect1()

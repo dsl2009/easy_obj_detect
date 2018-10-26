@@ -1,6 +1,7 @@
 #coding=utf-8
 import tensorflow as tf
 from utils import np_utils
+import config
 def smooth_l1_loss(y_true, y_pred):
     """Implements Smooth-L1 loss.
     y_true and y_pred are typicallly: [N, 4], but could be any shape.
@@ -19,7 +20,8 @@ def soft_focal_loss(logits,labels,number_cls=20):
     return loss
 
 def get_loss(conf_t,loc_t,pred_loc, pred_confs,cfg):
-    anc = np_utils.pt_from_nms(np_utils.gen_ssd_anchors_lvcai())
+
+    anc = np_utils.pt_from_nms(config.anchor_gen(config.image_size))
     anchors = tf.constant(anc,dtype=tf.float32)
 
     conf_t = tf.reshape(conf_t,shape=(-1,))
@@ -43,8 +45,9 @@ def get_loss(conf_t,loc_t,pred_loc, pred_confs,cfg):
 
     pred_conf = tf.reshape(pred_confs,shape=(-1, cfg.Config['num_classes']))
 
-
-    conf_t_tm = tf.cast(conf_t,tf.int32)
+    zeros = tf.zeros(shape=tf.shape(conf_t), dtype=tf.float32)
+    conf_t_tm = tf.where(tf.less(conf_t, 0), zeros, conf_t)
+    conf_t_tm = tf.cast(conf_t_tm,tf.int32)
     conf_t_tm  = tf.reshape(conf_t_tm ,shape=(-1,))
     index = tf.stack([tf.range(tf.shape(conf_t_tm)[0]),conf_t_tm],axis=1)
 

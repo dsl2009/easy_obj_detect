@@ -449,11 +449,11 @@ def refine_detections_graph(rois, probs, deltas,window,cfg):
     class_scores = tf.reduce_max(probs, axis=1)
     # Class probability of the top class of each ROI
 
-    #ix = tf.range(cfg.NMS_ROIS_TRAINING)
-    #idece = tf.stack([ix,class_ids],axis=1)
+    ix = tf.range(cfg.NMS_ROIS_TRAINING)
+    idece = tf.stack([ix,class_ids],axis=1)
 
-    #deltas_specific = tf.gather_nd(deltas,idece)
-    deltas_specific = deltas
+    deltas_specific = tf.gather_nd(deltas,idece)
+    #deltas_specific = deltas
 
 
     refined_rois = apply_box_deltas_graph(

@@ -11,14 +11,13 @@ def smooth_l1_loss(y_true, y_pred):
 
 def soft_focal_loss(logits,labels,number_cls=20):
     labels = tf.one_hot(labels,number_cls)
-    loss = tf.reduce_sum(labels*(-(1 - tf.nn.softmax(logits))**1*tf.log(tf.nn.softmax(logits))),axis=1)
+    loss = tf.reduce_sum(labels*(-(1 - tf.nn.softmax(logits))**2*tf.log(tf.nn.softmax(logits))),axis=1)
     return loss
 
 def rpn_class_loss_graph(rpn_match, rpn_class_logits):
 
 
     anchor_class = tf.cast(tf.equal(rpn_match, 1), tf.int32)
-
     indices = tf.where(tf.not_equal(rpn_match, -1))
     rpn_class_logits = tf.gather_nd(rpn_class_logits, indices)
     anchor_class = tf.gather_nd(anchor_class, indices)
@@ -28,13 +27,9 @@ def rpn_class_loss_graph(rpn_match, rpn_class_logits):
 
 def rpn_class_loss_graph1(rpn_match, rpn_class_logits):
 
-
     anchor_class = tf.cast(tf.equal(rpn_match, 1), tf.int32)
 
     indices = tf.where(tf.not_equal(rpn_match, -1))
-
-
-
     rpn_class_logits = tf.gather_nd(rpn_class_logits, indices)
     anchor_class = tf.gather_nd(anchor_class, indices)
     loss = soft_focal_loss(labels=anchor_class,logits=rpn_class_logits ,number_cls=2)
@@ -59,15 +54,21 @@ def rpn_bbox_loss_graph( input_rpn_deltas, input_rpn_label, pred_rpn_deltas):
     return loss
 
 
-def mrcnn_class_loss_graph(target_class_ids, pred_class_logits):
-
+def mrcnn_class_loss_graph(target_class_ids, pred_class_logits, rois):
+    rois = tf.reshape(rois, shape=(-1,4))
+    sm = tf.reduce_sum(rois, axis=1)
+    idx = tf.where(sm>0)[:,0]
     target_class_ids = tf.reshape(target_class_ids, shape=(-1,))
-
     target_class_ids = tf.cast(target_class_ids, 'int64')
+    target_class_ids = tf.gather(target_class_ids, idx)
+    pred_class_logits = tf.gather(pred_class_logits, idx)
 
-    loss = soft_focal_loss(labels=target_class_ids, logits=pred_class_logits, number_cls=21)
+    loss = soft_focal_loss(labels=target_class_ids, logits=pred_class_logits, number_cls=11)
 
-    loss = tf.reduce_mean(loss)
+    loss = tf.keras.backend.switch(tf.cast(tf.size(loss) > 0, tf.bool), tf.reduce_mean(loss), tf.constant(0.0))
+
+
+
     return loss
 
 

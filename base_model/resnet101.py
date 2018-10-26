@@ -13,7 +13,7 @@ def resnet_arg_scope_batch_norm(weight_decay=0.0001,
       'decay': batch_norm_decay,
       'epsilon': batch_norm_epsilon,
       'scale': batch_norm_scale,
-      'trainable':True,
+      'trainable':False,
       'updates_collections': tf.GraphKeys.UPDATE_OPS,
       'fused': None,  # Use fused batch norm if possible.
   }
@@ -72,20 +72,20 @@ def second_arg_gn():
 
 
 
-def resnet_v2_50(inputs,
+def resnet_v2_101(inputs,
                  num_classes=None,
                  is_training=True,
                  global_pool=True,
                  output_stride=None,
                  spatial_squeeze=True,
                  reuse=None,
-                 scope='resnet_v2_50'):
+                 scope='resnet_v2_101'):
   """ResNet-50 model of [1]. See resnet_v2() for arg and return description."""
 
   blocks = [
       resnet_v2_block('block1', base_depth=64, num_units=3, stride=2),
       resnet_v2_block('block2', base_depth=128, num_units=4, stride=2),
-      resnet_v2_block('block3', base_depth=256, num_units=6, stride=2),
+      resnet_v2_block('block3', base_depth=256, num_units=23, stride=2),
       resnet_v2_block('block4', base_depth=512, num_units=3, stride=2),
   ]
   return resnet_v2(inputs, blocks, num_classes, is_training=is_training,
@@ -109,11 +109,11 @@ def depwise_cov(x):
 
 def fpn_re(img):
     with slim.arg_scope(base_arg()):
-        _, endpoint = resnet_v2_50(img)
-    c1 = endpoint['resnet_v2_50/block1']
-    c2 = endpoint['resnet_v2_50/block2']
-    c3 = endpoint['resnet_v2_50/block3']
-    c4 = endpoint['resnet_v2_50/block4']
+        _, endpoint = resnet_v2_101(img)
+    c1 = endpoint['resnet_v2_101/block1']
+    c2 = endpoint['resnet_v2_101/block2']
+    c3 = endpoint['resnet_v2_101/block3']
+    c4 = endpoint['resnet_v2_101/block4']
 
     p3 = slim.conv2d(c3, 256, 1, activation_fn=None)
     p3_upsample = tf.image.resize_bilinear(p3, tf.shape(c2)[1:3])
@@ -137,11 +137,11 @@ def fpn_re(img):
 
 def fpn(img):
     with slim.arg_scope(base_arg()):
-        _, endpoint = resnet_v2_50(img)
-    c1 = endpoint['resnet_v2_50/block1']
-    c2 = endpoint['resnet_v2_50/block2']
-    c3 = endpoint['resnet_v2_50/block3']
-    c4 = endpoint['resnet_v2_50/block4']
+        _, endpoint = resnet_v2_101(img)
+    c1 = endpoint['resnet_v2_101/block1']
+    c2 = endpoint['resnet_v2_101/block2']
+    c3 = endpoint['resnet_v2_101/block3']
+    c4 = endpoint['resnet_v2_101/block4']
     with slim.arg_scope(second_arg()):
         p5 = slim.conv2d(c3, 256, 1, activation_fn=None)
         p5_upsample = tf.image.resize_bilinear(p5, tf.shape(c2)[1:3])

@@ -31,3 +31,11 @@ def fpn(img):
     p7 = slim.conv2d(p7, 256, kernel_size=3, stride=2, activation_fn=None)
 
     return [p3, p4, p5, p6, p7]
+
+
+x = tf.placeholder(shape=[1,513,513,3],dtype=tf.float32)
+
+pd, ed= inception_v3.inception_v3(x, num_classes=10,spatial_squeeze=False)
+print(pd)
+for d in ed:
+    print(d, ed[d])

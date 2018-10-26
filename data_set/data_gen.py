@@ -46,6 +46,9 @@ def get_batch(batch_size,class_name, is_shuff = True,max_detect = 50,image_size=
 
                 if random.randint(0,1)==1:
                    img, box = aug_utils.fliplr_left_right(img,box)
+                if random.randint(0,1)==1:
+                   img, box = aug_utils.fliplr_up_down(img,box)
+
                 img = img -[123.15, 115.90, 103.06]
 
             else:

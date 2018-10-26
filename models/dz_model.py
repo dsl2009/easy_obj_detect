@@ -1,8 +1,9 @@
 import tensorflow as tf
-from utils.np_utils import gen_ssd_anchors_lvcai,gen_ssd_anchors
+
 from tensorflow.contrib import slim
 import config
-from base_model import resnet50
+from nets import inception_resnet_v2
+from base_model import resnet50,resnet101
 def mul_channel_arg_scope(weight_decay=0.00004,
                         use_batch_norm=True,
                         batch_norm_decay=0.9997,
@@ -54,13 +55,14 @@ else:
 
 def mid_cov(x, scope):
     with tf.variable_scope(scope,reuse=tf.AUTO_REUSE):
-        x1 = slim.conv2d(x, 256, kernel_size=[7,1],stride=1)
-        x1 = slim.conv2d(x, 256, kernel_size=[1, 7], stride=1,activation_fn=None)
-        x2 = slim.conv2d(x, 256, kernel_size=[1,7],stride=1)
-        x2 = slim.conv2d(x, 256, kernel_size=[7, 1], stride=1,activation_fn=None)
-        x = x1+x2
-        x = slim.conv2d(x, 256, 3)
-        x = slim.conv2d(x, 256, 3)
+        x1 = slim.conv2d(x, 128, 1)
+        x1 = slim.conv2d(x1, 64, kernel_size=[5,1],stride=1)
+        x1 = slim.conv2d(x1, 64, kernel_size=[1, 5], stride=1)
+        f = slim.conv2d(x, 128, 1)
+        f = tf.concat([x1,f],axis=3)
+        f = slim.conv2d(f, 256, 3,activation_fn=None, normalizer_fn=None)
+        x = x+f
+        x = tf.nn.relu(x)
         return x
 
 
@@ -68,6 +70,7 @@ def classfy_model(feature_map,ix, num_anchors=9):
     with tf.variable_scope('classfy'+str(ix),reuse=tf.AUTO_REUSE):
         with slim.arg_scope(base_arg()):
             feature_map = slim.repeat(feature_map,4,slim.conv2d,num_outputs=256,kernel_size=3,stride=1,scope='classfy_repeat')
+            #feature_map = slim.repeat(feature_map, 4, mid_cov, scope='classfy_repeat')
             #feature_map = mid_cov(feature_map, 'mid_'+str(ix))
         out_puts = slim.conv2d(feature_map, config.Config['num_classes'] * num_anchors, kernel_size=3, stride=1,scope='classfy_conv',
                                weights_initializer=tf.initializers.zeros,activation_fn=None)
@@ -78,21 +81,21 @@ def classfy_model(feature_map,ix, num_anchors=9):
 def regression_model(feature_map,ix, num_anchors=9):
     with tf.variable_scope('regression'+str(ix), reuse=tf.AUTO_REUSE):
         with slim.arg_scope(base_arg()):
-            feature_map = slim.repeat(feature_map, 4, slim.conv2d, num_outputs=256, kernel_size=3, stride=1,
-                                      scope='regression_repeat')
+            feature_map = slim.repeat(feature_map, 4, slim.conv2d, num_outputs=256, kernel_size=3, stride=1,scope='regression_repeat')
+            #feature_map = slim.repeat(feature_map, 4, mid_cov, scope='regression_repeat')
         out_puts = slim.conv2d(feature_map, 4 * num_anchors, kernel_size=3, stride=1,scope='regression',activation_fn=None)
         out_puts = tf.reshape(out_puts, shape=(config.batch_size,-1, 4))
 
     return out_puts
 
-def hebing(feature_map,scope):
+def hebing(feature_map,scope,num_anchors=9):
     with tf.variable_scope(scope, reuse=tf.AUTO_REUSE):
         with slim.arg_scope(base_arg()):
             feature_map = slim.repeat(feature_map, 4, slim.conv2d, num_outputs=256, kernel_size=3, stride=1,scope='regression_repeat')
-        box = slim.conv2d(feature_map, 4 * 9, kernel_size=3, stride=1,scope='regression',activation_fn=None)
+        box = slim.conv2d(feature_map, 4 * num_anchors, kernel_size=3, stride=1,scope='regression',activation_fn=None)
         box = tf.reshape(box, shape=(config.batch_size,-1, 4))
 
-        logits = slim.conv2d(feature_map, config.Config['num_classes'] * 9, kernel_size=3, stride=1,
+        logits = slim.conv2d(feature_map, config.Config['num_classes'] * num_anchors, kernel_size=3, stride=1,
                                scope='classfy_conv',
                                weights_initializer=tf.initializers.zeros, activation_fn=None)
         logits = tf.reshape(logits, shape=(config.batch_size, -1, config.Config['num_classes']))
@@ -101,18 +104,29 @@ def hebing(feature_map,scope):
     return box, logits
 
 
-def get_box_logits(img,cfg):
-    fpns = resnet50.fpn(img)
+def get_box_logits1(img,cfg):
+    fpns = resnet101.fpn(img)
     logits = []
     boxes = []
-    for fp in fpns:
-        logits.append(classfy_model(fp,0, 18))
-        boxes.append(regression_model(fp,0, 18))
+    for ix, fp in enumerate(fpns):
+        box, logit = hebing(fp,'hebing', config.aspect_num[ix])
+        boxes.append(box)
+        logits.append(logit)
     logits = tf.concat(logits, axis=1)
     boxes = tf.concat(boxes, axis=1)
     return boxes,logits,None
 
 
+def get_box_logits(img,cfg):
+    fpns = resnet101.fpn(img)
+    logits = []
+    boxes = []
+    for ix, fp in enumerate(fpns):
+        logits.append(classfy_model(fp,0, config.aspect_num[ix]))
+        boxes.append(regression_model(fp,0, config.aspect_num[ix]))
+    logits = tf.concat(logits, axis=1)
+    boxes = tf.concat(boxes, axis=1)
+    return boxes,logits,None
 
 
 
@@ -127,13 +141,13 @@ def decode_box(prios,pred_loc,variance=None):
     return  tf.concat([xy_min,xy_max],axis=1)
 
 def predict(ig,pred_loc, pred_confs, vbs,cfg):
-    priors = gen_ssd_anchors_lvcai()
+    priors = config.anchor_gen(config.image_size)
     box = decode_box(prios=priors, pred_loc=pred_loc[0])
     props = slim.nn.softmax(pred_confs[0])
     pp = props[:,1:]
     cls = tf.argmax(pp, axis=1)
     pp = tf.reduce_max(pp,axis=1)
-    ix = tf.where(tf.greater(pp,0.1))[:,0]
+    ix = tf.where(tf.greater(pp,0.3))[:,0]
     score = tf.gather(pp,ix)
     box = tf.gather(box,ix)
     cls = tf.gather(cls, ix)
@@ -146,3 +160,4 @@ def predict(ig,pred_loc, pred_confs, vbs,cfg):
         max_output_size=100
     )
     return tf.gather(box,keep),tf.gather(score,keep),tf.gather(cls,keep)
+

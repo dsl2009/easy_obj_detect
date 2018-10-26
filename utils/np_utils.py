@@ -56,155 +56,10 @@ def encode(matched, priors, variances):
     g_wh = np.log(g_wh) / variances[1]
     # return target for smooth_l1_loss
     return np.hstack([g_cxcy, g_wh])  # [num_priors,4]
-def generate_anchors(scales, ratios, shape, feature_stride, anchor_stride=1):
-    """
-    scales: 1D array of anchor sizes in pixels. Example: [32, 64, 128]
-    ratios: 1D array of anchor ratios of width/height. Example: [0.5, 1, 2]
-    shape: [height, width] spatial shape of the feature map over which
-            to generate anchors.
-    feature_stride: Stride of the feature map relative to the image in pixels.
-    anchor_stride: Stride of anchors on the feature map. For example, if the
-        value is 2 then generate anchors for every other feature map pixel.
-    """
-    # Get all combinations of scales and ratios
-    scales, ratios = np.meshgrid(np.array(scales), np.array(ratios))
-    scales = scales.flatten()
-    ratios = ratios.flatten()
 
-    # Enumerate heights and widths from scales and ratios
-    heights = scales / np.sqrt(ratios)
-    widths = scales * np.sqrt(ratios)
-
-    # Enumerate shifts in feature space
-
-    shifts_y = np.arange(0, shape[0], anchor_stride) * feature_stride
-    shifts_x = np.arange(0, shape[1], anchor_stride) * feature_stride
-    shifts_x, shifts_y = np.meshgrid(shifts_x, shifts_y)
-
-    # Enumerate combinations of shifts, widths, and heights
-    box_widths, box_centers_x = np.meshgrid(widths, shifts_x)
-    box_heights, box_centers_y = np.meshgrid(heights, shifts_y)
-
-    # Reshape to get a list of (y, x) and a list of (h, w)
-    box_centers = np.stack(
-        [box_centers_x, box_centers_y], axis=2).reshape([-1, 2])
-    box_sizes = np.stack([box_widths,box_heights], axis=2).reshape([-1, 2])
-
-    boxes = np.concatenate([box_centers,box_sizes],axis=1)
-
-    # Convert to corner coordinates (y1, x1, y2, x2)
-    #boxes = np.concatenate([box_centers - 0.5 * box_sizes,
-                           # box_centers + 0.5 * box_sizes], axis=1)
-
-
-    return boxes
-
-
-def gen_multi_anchors(scales, ratios, shape, feature_stride, anchor_stride=1):
-    anchors = []
-    for s in range(len(feature_stride)):
-        an = generate_anchors(scales[s],ratios[s],shape[s],feature_stride[s],anchor_stride=1)
-        anchors.append(an)
-    return np.vstack(anchors)
-
-def gen_ssd_anchors1():
-    #scals = [(36,74,96),(136,198,244),(294,349,420)]
-    scals = [(24, 32, 64), (96, 156, 244), (294, 349, 420)]
-    ratios = [[0.5,1,2],[0.5,1,2],[0.5,1,2]]
-    shape =[(64,64),(32,32),(16,16)]
-    feature_stride = [8,16,32]
-    anchors = gen_multi_anchors(scales=scals,ratios=ratios,shape=shape,feature_stride=feature_stride)
-    anchors = anchors/512.0
-    out = np.clip(anchors, a_min=0.0, a_max=1.0)
-    return out
-
-def gen_ssd_anchors():
-    if False:
-        size = [16, 32, 64, 128, 256, 512]
-        #size = [24, 48, 96, 192, 384, 600]
-        feature_stride = [8, 16, 32, 64, 128, 256]
-        ratios = [[0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2]]
-    else:
-        size = [24, 48, 96, 192, 384]
-        feature_stride = [8, 16, 32, 64, 128]
-        ratios = [[0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2]]
-    if config.total_fpn!=-1:
-        size = size[0:config.total_fpn]
-        feature_stride = feature_stride[0:config.total_fpn]
-        ratios = ratios[0:config.total_fpn]
-
-    scals = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
-    sc = [(s * scals[0], s * scals[1], s * scals[2]) for s in size]
-
-
-    shape = [(config.image_size[0]/x, config.image_size[1]/x) for x in feature_stride]
-    anchors = gen_multi_anchors(scales=sc,ratios=ratios,shape=shape,feature_stride=feature_stride)
-    anchors = anchors/np.asarray([config.image_size[1],config.image_size[0], config.image_size[1], config.image_size[0]])
-    out = np.clip(anchors, a_min=0.0, a_max=1.0)
-
-    return out
-
-
-def gen_ssd_anchors_new():
-    size = [16, 32, 64]
-    feature_stride = [8, 16, 32, 64]
-    ratios = [[0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2]]
-    scals = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
-    sc = [[s * scals[0], s * scals[1], s * scals[2]] for s in size]
-
-    sc.append([128, 196, 256, 384, 512])
-    shape = [(config.image_size[0] / x, config.image_size[1] / x) for x in feature_stride]
-    anchors = gen_multi_anchors(scales=sc, ratios=ratios, shape=shape, feature_stride=feature_stride)
-    anchors = anchors / np.asarray(
-        [config.image_size[1], config.image_size[0], config.image_size[1], config.image_size[0]])
-    out = np.clip(anchors, a_min=0.0, a_max=1.0)
-
-    return out
-
-def gen_ssd_anchors_lvcai():
-    r = 1.0
-    if False:
-        size = [16, 32, 64, 128, 256, 512]
-        #size = [24, 48, 96, 192, 384, 600]
-        feature_stride = [8, 16, 32, 64, 128, 256]
-        ratios = [[0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2]]
-    else:
-        size = [24*r, 48*r, 96*r, 192*r, 384*r]
-        feature_stride = [8, 16, 32, 64, 128]
-        ratios = [[0.5, 1, 2, 8, 16, 32], [0.5, 1, 2, 8, 16, 32], [0.5, 1, 2, 8, 16, 32], [0.5, 1, 2, 8, 16, 32], [0.5, 1, 2, 8, 16, 32]]
-    if config.total_fpn!=-1:
-        size = size[0:config.total_fpn]
-        feature_stride = feature_stride[0:config.total_fpn]
-        ratios = ratios[0:config.total_fpn]
-
-    scals = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
-    sc = [(s * scals[0], s * scals[1], s * scals[2]) for s in size]
-
-
-    shape = [(config.image_size[0]/x, config.image_size[1]/x) for x in feature_stride]
-    anchors = gen_multi_anchors(scales=sc,ratios=ratios,shape=shape,feature_stride=feature_stride)
-    anchors = anchors/np.asarray([config.image_size[1],config.image_size[0], config.image_size[1], config.image_size[0]])
-    out = np.clip(anchors, a_min=0.0, a_max=1.0)
-
-    return out
-
-def gen_anchors_single():
-
-    size = [16, 32, 64, 128, 256, 512]
-
-    feature_stride = [8]
-    ratios = [[ 0.5, 1, 2]]
-
-    scals = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
-    sc = [(16, 32, 64, 128, 256, 512)]
-    shape = [(config.image_size[0]/x, config.image_size[1]/x) for x in feature_stride]
-    anchors = gen_multi_anchors(scales=sc,ratios=ratios,shape=shape,feature_stride=feature_stride)
-    anchors = anchors/np.asarray([config.image_size[1],config.image_size[0], config.image_size[1], config.image_size[0]])
-    out = np.clip(anchors, a_min=0.0, a_max=1.0)
-    return out
 
 def get_loc_conf(true_box, true_label,batch_size = 4,cfg =None):
-    pri = gen_ssd_anchors()
+    pri =config.anchor_gen(config.image_size)
     num_priors = pri.shape[0]
     loc_t = np.zeros([batch_size, num_priors, 4])
     conf_t = np.zeros([batch_size, num_priors])
@@ -230,7 +85,7 @@ def get_loc_conf(true_box, true_label,batch_size = 4,cfg =None):
     return loc_t,conf_t
 
 def get_loc_conf_new(true_box, true_label,batch_size = 4,cfg = None):
-    pri = gen_ssd_anchors_lvcai()
+    pri = config.anchor_gen(config.image_size)
     num_priors = pri.shape[0]
     loc_t = np.zeros([batch_size, num_priors, 4])
     conf_t = np.zeros([batch_size, num_priors])
@@ -275,7 +130,7 @@ def revert_image(scale,padding,image_size,box):
 def get_loc_conf_mask(true_box, true_label,batch_size = 4,cfg  = None):
 
     #pri = get_prio_box(cfg = cfg)
-    pri = gen_ssd_anchors()
+    pri = config.anchor_gen(config.image_size)
     num_priors = pri.shape[0]
     loc_t = np.zeros([batch_size, num_priors, 4])
     conf_t = np.zeros([batch_size, num_priors])
@@ -317,7 +172,7 @@ def get_loc_conf_mask(true_box, true_label,batch_size = 4,cfg  = None):
 
 def build_rpn_targets(true_box, true_label,batch_size = 4,cfg = None):
     rpn_nums = 256
-    anchors = gen_ssd_anchors()
+    anchors = pri = config.anchor_gen(config.image_size)
     num_priors = anchors.shape[0]
     rpn_box = np.zeros([batch_size, num_priors, 4])
     rpn_labels = np.zeros([batch_size, num_priors])
@@ -342,10 +197,10 @@ def build_rpn_targets(true_box, true_label,batch_size = 4,cfg = None):
 
         matches = true_box_tm[best_true_idx]
         conf = labels[best_true_idx] + 1
-        conf[best_true>0.7] = 1
+        conf[best_true>0.65] = 1
         conf[best_true <= 0.3] = 0
         b1 = best_true > 0.3
-        b2 = best_true <= 0.7
+        b2 = best_true <= 0.65
         conf[b1 * b2] = -1
         cho = np.where(conf==0)[0]
         np.random.shuffle(cho)

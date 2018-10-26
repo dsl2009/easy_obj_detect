@@ -22,7 +22,7 @@ def train():
     pred_loc, pred_confs, vbs = get_box_logits(img,config)
 
     train_tensors = get_loss(conf, loc, pred_loc, pred_confs,config)
-    gen_bdd = data_gen.get_batch(batch_size=config.batch_size,class_name='voc',image_size=config.image_size,max_detect=100)
+    gen_bdd = data_gen.get_batch(batch_size=config.batch_size,class_name='lvcai',image_size=config.image_size,max_detect=100)
     global_step = slim.get_or_create_global_step()
     lr = tf.train.exponential_decay(
         learning_rate=0.001,
@@ -80,7 +80,7 @@ def detect():
     total_bxx = []
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/voc_nms/model.ckpt-47306')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/voc_hebing/model.ckpt-5533')
         images_path = glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/VOCdevkit/VOCdevkit/VOC2007/JPEGImages/*.jpg')
         for ip in images_path:
             print(ip)

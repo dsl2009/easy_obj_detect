@@ -1,4 +1,5 @@
 import numpy as np
+from utils.anchors_gen import gen_ssd_anchors, gen_ssd_anchors_lvcai, gen_ssd_anchors_new
 remove_norm = {
     'num_classes': 11,
     'feature_maps': [64, 32, 16,8,4],
@@ -31,11 +32,12 @@ COCO_CLASSES = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'tr
                 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink',
                 'refrigerator', 'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush']
 BDD = ['bike', 'bus', 'car', 'motor', 'person', 'rider','traffic light', 'traffic sign', 'train', 'truck']
+Lvcai = ['defect0','defect1','defect2','defect3','defect4','defect5','defect6','defect7','defect8','defect9']
 
 Tree = ['tree']
 MAX_GT = 100
-batch_size = 4
-image_size = [512, 512]
+batch_size = 2
+image_size = [896, 896]
 mask_pool_shape = 28
 norm_value = 2.0
 mask_weight_loss = 2.0
@@ -52,10 +54,10 @@ local_coco_ann = '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/coco/raw-data/
 server_coco_dir = '/data_set/data/train2014'
 server_coco_ann = '/data_set/data/annotations/instances_train2014.json'
 
-local_check = '/home/dsl/all_check/resnet_v2_50_2017_04_14/resnet_v2_50.ckpt'
+local_check = '/home/dsl/all_check/resnet_v2_101_2017_04_14/resnet_v2_101.ckpt'
 server_check = '/data_set/check/inception_v2.ckpt'
 
-local_save = '/home/dsl/all_check/obj_detect/faster00'
+local_save = '/home/dsl/all_check/obj_detect/lvcai_gn_aug_101'
 server_save = '/data_set/check/voc_ssd_yolo'
 
 is_use_group_norm = True
@@ -65,9 +67,10 @@ if not is_use_last:
     aspect_num = [9,9,9,9,9]
 else:
     feature_stride = [8, 16, 32, 64, 128]
-    #aspect_num = [18, 18, 18, 18, 18]
-    aspect_num = [9, 9, 9, 9, 9]
+    aspect_num = [18, 18, 18, 18, 18]
+    #aspect_num = [9, 9, 9, 9, 9]
 
+anchor_gen = gen_ssd_anchors_lvcai
 
 total_anchor_num = sum([(image_size[0]/x)*(image_size[1]/x)*y for x,y in zip(feature_stride,aspect_num)])
 
@@ -77,7 +80,6 @@ if flag == 1:
     voc_dir = local_voc_dir
     coco_image_dir = local_coco_dir
     annotations = local_coco_ann
-    batch_size = 4
 elif flag ==2:
     save_dir = server_save
     check_dir = server_check
