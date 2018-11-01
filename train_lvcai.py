@@ -90,7 +90,7 @@ def detect():
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_50_05/model.ckpt-10641')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_50_05/model.ckpt-11950')
         images_path = sorted(glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/r2testb/*.jpg'))
         for ip in images_path:
             name = ip.split('/')[-1]
