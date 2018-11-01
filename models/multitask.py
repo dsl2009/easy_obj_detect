@@ -103,30 +103,46 @@ def hebing(feature_map,scope,num_anchors=9):
 
     return box, logits
 
+def rpn_graph(feature_map, anchors_per_location=config.aspect_num[0]):
+    shared = slim.conv2d(feature_map, 512, 3, activation_fn=slim.nn.relu)
+    x = slim.conv2d(shared, 2 * anchors_per_location, kernel_size=1, padding='VALID', activation_fn=None)
+    rpn_class_logits = tf.reshape(x, shape=[tf.shape(x)[0], -1, 2])
+    rpn_probs = slim.nn.softmax(rpn_class_logits)
+    x = slim.conv2d(shared, 4 * anchors_per_location, kernel_size=1, padding='VALID', activation_fn=None)
+    rpn_bbox = tf.reshape(x, shape=[tf.shape(x)[0], -1, 4])
+    return [rpn_class_logits, rpn_probs, rpn_bbox]
 
-def get_box_logits1(img,cfg):
-    fpns = resnet50.fpn(img)
-    logits = []
-    boxes = []
-    for ix, fp in enumerate(fpns):
-        box, logit = hebing(fp,'hebing', config.aspect_num[ix])
-        boxes.append(box)
-        logits.append(logit)
-    logits = tf.concat(logits, axis=1)
-    boxes = tf.concat(boxes, axis=1)
-    return boxes,logits,None
+
+
+def get_rpns(fp):
+    rpn_c_l = []
+    r_p = []
+    r_b = []
+    for f in fp:
+        rpn_class_logits, rpn_probs, rpn_bbox = rpn_graph(f)
+        rpn_c_l.append(rpn_class_logits)
+        r_p.append(rpn_probs)
+        r_b.append(rpn_bbox)
+    rpn_class_logits = tf.concat(rpn_c_l, axis=1)
+    rpn_bbox = tf.concat(r_b, axis=1)
+    return rpn_class_logits,  rpn_bbox
+
+
 
 
 def get_box_logits(img,cfg):
-    fpns = resnet50.fpn(img)
+    cn, bn = resnet50.fpn_retin_det(img)
     logits = []
     boxes = []
-    for ix, fp in enumerate(fpns):
+    for ix, fp in enumerate(bn):
         logits.append(classfy_model(fp,0, config.aspect_num[ix]))
         boxes.append(regression_model(fp,0, config.aspect_num[ix]))
     logits = tf.concat(logits, axis=1)
     boxes = tf.concat(boxes, axis=1)
-    return boxes,logits,None
+
+    rpn_class_logits, rpn_bbox = get_rpns(bn)
+
+    return boxes,logits, rpn_class_logits, rpn_bbox
 
 
 
@@ -140,7 +156,7 @@ def decode_box(prios,pred_loc,variance=None):
     xy_max = boxes[:, 2:] + xy_min
     return  tf.concat([xy_min,xy_max],axis=1)
 
-def predict(ig,pred_loc, pred_confs, vbs,cfg):
+def predict(ig,pred_loc, pred_confs, cfg):
     priors = config.anchor_gen(config.image_size)
     box = decode_box(prios=priors, pred_loc=pred_loc[0])
     props = slim.nn.softmax(pred_confs[0])

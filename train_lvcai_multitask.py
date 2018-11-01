@@ -1,9 +1,9 @@
 #coding=utf-8
 import tensorflow as tf
-from losses.ret_nms_loss import get_loss
+from losses.multi_task_loss import get_loss
 from dsl_data import visual
 import config
-from models.dz_model import get_box_logits,predict
+from models.multitask import get_box_logits,predict
 from dsl_data.utils import resize_image,resize_image_fixed_size
 from tensorflow.contrib import slim
 from utils import np_utils
@@ -18,10 +18,12 @@ def train():
     img = tf.placeholder(shape=[config.batch_size, config.image_size[0], config.image_size[1], 3], dtype=tf.float32)
     loc = tf.placeholder(shape=[config.batch_size, config.total_anchor_num, 4], dtype=tf.float32)
     conf = tf.placeholder(shape=[config.batch_size, config.total_anchor_num], dtype=tf.float32)
-    pred_loc, pred_confs, vbs = get_box_logits(img,config)
-    train_tensors = get_loss(conf, loc, pred_loc, pred_confs,config)
+    pred_loc, pred_confs,  rpn_class_logits, rpn_bbox = get_box_logits(img,config)
+    print(rpn_bbox)
+    print(rpn_class_logits)
+    train_tensors = get_loss(conf, loc, pred_loc, pred_confs, rpn_bbox, rpn_class_logits, config)
     gen_bdd = data_gen.get_batch(batch_size=config.batch_size,class_name='lvcai',image_size=config.image_size,max_detect=100)
-    q = data_loader_multi.get_thread(gen=gen_bdd,thread_num=1)
+
     global_step = slim.get_or_create_global_step()
     lr = tf.train.exponential_decay(
         learning_rate=0.001,
@@ -51,7 +53,7 @@ def train():
         for step in range(1000000):
             print('       '+' '.join(['*']*(step%10)))
 
-            images, true_box, true_label = q.get()
+            images, true_box, true_label = next(gen_bdd)
 
             try:
                 loct, conft = np_utils.get_loc_conf_new(true_box, true_label, batch_size=config.batch_size,cfg=config.Config)
@@ -63,8 +65,11 @@ def train():
             ls, step = sess.run([train_op, global_step], feed_dict=feed_dict)
             if step % 10 == 0:
                 print('step:' + str(step) +
-                      ' ' + 'class_loss:' + str(ls[0]) +
-                      ' ' + 'loc_loss:' + str(ls[1])
+                      ' ' + 'class_rpn:' + str(ls[1]) +
+                      ' ' + 'loc_rpn:' + str(ls[0])+
+                      ' ' + 'class_loss:' + str(ls[2])+
+                      ' ' + 'loc_loss:' + str(ls[3])
+
                       )
                 summaries = sess.run(sum_op, feed_dict=feed_dict)
                 sv.summary_computed(sess, summaries)
@@ -78,19 +83,19 @@ def get_right():
 
 def detect():
     config.batch_size = 1
-    config.image_size = [896, 1024]
+    config.image_size = [896, 896]
     imgs = tf.placeholder(shape=(1, config.image_size[0], config.image_size[1], 3), dtype=tf.float32)
     #ig = AddCoords(x_dim=512, y_dim=512)(imgs)
 
-    pred_loc, pred_confs, vbs = get_box_logits(imgs,config)
-    box,score,pp = predict(imgs,pred_loc, pred_confs, vbs,config.Config)
+    pred_loc, pred_confs,   rpn_class_logits, rpn_bbox = get_box_logits(imgs,config)
+    box,score,pp = predict(imgs,rpn_bbox, rpn_class_logits, config.Config)
     saver = tf.train.Saver()
     total_bxx = []
     rig = get_right()
-
+    print(rig)
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_50_05/model.ckpt-10641')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_multitask/model.ckpt-16433')
         images_path = sorted(glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/r2testb/*.jpg'))
         for ip in images_path:
             name = ip.split('/')[-1]
@@ -107,7 +112,7 @@ def detect():
             cls = []
             scores = []
             for s in range(len(p)):
-                if sc[s]>=0.4:
+                if sc[s]>=0.3:
                     bxx.append(bx[s])
                     cls.append(p[s])
                     scores.append(sc[s])

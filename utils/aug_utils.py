@@ -4,7 +4,9 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 trans = transforms.Compose([
-        transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.3 ),
+        transforms.ColorJitter(brightness=0.3, contrast=0.3 ),
+        transforms.RandomAffine(degrees=30),
+
         ])
 
 for x in range(10):

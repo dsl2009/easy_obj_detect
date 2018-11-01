@@ -108,7 +108,7 @@ def get_loc_conf_new(true_box, true_label,batch_size = 4,cfg = None):
         conf = labels[best_true_idx] + 1
         conf[best_true <= 0.3] = 0
         b1 = best_true>0.3
-        b2 = best_true<=0.6
+        b2 = best_true<=0.5
         conf[b1*b2] = -1
         loc = encode(matches, pri, variances=[0.1, 0.2])
         loc_t[s] = loc
@@ -197,10 +197,10 @@ def build_rpn_targets(true_box, true_label,batch_size = 4,cfg = None):
 
         matches = true_box_tm[best_true_idx]
         conf = labels[best_true_idx] + 1
-        conf[best_true>0.65] = 1
+        conf[best_true>0.5] = 1
         conf[best_true <= 0.3] = 0
         b1 = best_true > 0.3
-        b2 = best_true <= 0.65
+        b2 = best_true <= 0.5
         conf[b1 * b2] = -1
         cho = np.where(conf==0)[0]
         np.random.shuffle(cho)

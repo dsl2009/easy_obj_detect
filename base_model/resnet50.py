@@ -146,14 +146,14 @@ def fpn(img):
         p5 = slim.conv2d(c3, 256, 1, activation_fn=None)
         p5_upsample = tf.image.resize_bilinear(p5, tf.shape(c2)[1:3])
         p5 = slim.nn.relu(p5)
-        p5 = slim.conv2d(p5, 256, 3, rate=4)
+        p5 = slim.conv2d(p5, 256, 3, rate=2)
         p5 = slim.conv2d(p5, 256, 3, activation_fn=None)
 
         p4 = slim.conv2d(c2, 256, 1, activation_fn=None)
         p4 = p4 + p5_upsample
         p4_upsample = tf.image.resize_bilinear(p4, tf.shape(c1)[1:3])
         p4 = slim.nn.relu(p4)
-        p4 = slim.conv2d(p4, 256, 3, rate=4)
+        p4 = slim.conv2d(p4, 256, 3, rate=2)
         p4 = slim.conv2d(p4, 256, 3, activation_fn=None)
 
         p3 = slim.conv2d(c1, 256, 1, activation_fn=None)
@@ -163,7 +163,7 @@ def fpn(img):
         p3 = slim.conv2d(p3, 256, 3, activation_fn=None)
 
         p6 = slim.conv2d(c4,1024,kernel_size=1)
-        p6 = slim.conv2d(p6, 256, 3, rate=4)
+        p6 = slim.conv2d(p6, 256, 3, rate=2)
         p6 = slim.conv2d(p6, 256, kernel_size=3, stride=1, activation_fn=None)
 
         p7 = slim.nn.relu(p6)
@@ -173,3 +173,45 @@ def fpn(img):
         bn = [p3, p4, p5, p6, p7]
 
         return bn
+
+def fpn_retin_det(img):
+    with slim.arg_scope(base_arg()):
+        _, endpoint = resnet_v2_50(img)
+    c1 = endpoint['resnet_v2_50/block1']
+    c2 = endpoint['resnet_v2_50/block2']
+    c3 = endpoint['resnet_v2_50/block3']
+    c4 = endpoint['resnet_v2_50/block4']
+    with slim.arg_scope(second_arg()):
+        c5 = slim.conv2d(c4, 1024, kernel_size=3, stride=2, activation_fn=None)
+
+        cn = [c1, c2, c3, c4, c5]
+
+        b5 = slim.conv2d(c5,256, kernel_size=3, stride=1, activation_fn=tf.nn.relu)
+        b5 = slim.conv2d(b5, 256, kernel_size=3, stride=1, activation_fn=tf.nn.relu)
+        b5 = slim.conv2d(b5, 256, kernel_size=3, stride=1, activation_fn=tf.nn.relu)
+
+        b4 = slim.conv2d(c4, 256, kernel_size=3, stride=1, activation_fn=tf.nn.relu)
+        b4 = slim.conv2d(b4, 256, kernel_size=3, stride=1, activation_fn=None)
+        dconv5 = slim.conv2d_transpose(c5,256,  kernel_size=4, stride=2, activation_fn=None)
+        b4 = b4+dconv5
+        b4 = slim.conv2d(b4, 256, kernel_size=3, stride=1, activation_fn=tf.nn.relu)
+
+        b3 = slim.conv2d(c3, 256, kernel_size=3, stride=1, activation_fn=tf.nn.relu)
+        b3 = slim.conv2d(b3, 256, kernel_size=3, stride=1, activation_fn=None)
+        dconv4 = slim.conv2d_transpose(c4, 256, kernel_size=4, stride=2, activation_fn=None)
+        b3 = b3 + dconv4
+        b3 = slim.conv2d(b3, 256, kernel_size=3, stride=1, activation_fn=tf.nn.relu)
+
+        b2 = slim.conv2d(c2, 256, kernel_size=3, stride=1, activation_fn=tf.nn.relu)
+        b2 = slim.conv2d(b2, 256, kernel_size=3, stride=1, activation_fn=None)
+        dconv3 = slim.conv2d_transpose(c3, 256, kernel_size=4, stride=2, activation_fn=None)
+        b2 = b2 + dconv3
+        b2 = slim.conv2d(b2, 256, kernel_size=3, stride=1, activation_fn=tf.nn.relu)
+
+        b1 = slim.conv2d(c1, 256, kernel_size=3, stride=1, activation_fn=tf.nn.relu)
+        b1 = slim.conv2d(b1, 256, kernel_size=3, stride=1, activation_fn=None)
+        dconv2 = slim.conv2d_transpose(c2, 256, kernel_size=4, stride=2, activation_fn=None)
+        b1 = b1 + dconv2
+        b1 = slim.conv2d(b1, 256, kernel_size=3, stride=1, activation_fn=tf.nn.relu)
+        bn = [b1, b2, b3, b4, b5]
+        return cn,bn

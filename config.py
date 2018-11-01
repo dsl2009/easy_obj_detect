@@ -36,8 +36,8 @@ Lvcai = ['defect0','defect1','defect2','defect3','defect4','defect5','defect6','
 
 Tree = ['tree']
 MAX_GT = 100
-batch_size = 2
-image_size = [896, 896]
+batch_size = 4
+image_size = [896, 1024]
 mask_pool_shape = 28
 norm_value = 2.0
 mask_weight_loss = 2.0
@@ -54,13 +54,13 @@ local_coco_ann = '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/coco/raw-data/
 server_coco_dir = '/data_set/data/train2014'
 server_coco_ann = '/data_set/data/annotations/instances_train2014.json'
 
-local_check = '/home/dsl/all_check/resnet_v2_101_2017_04_14/resnet_v2_101.ckpt'
+local_check = '/home/dsl/all_check/resnet_v2_50_2017_04_14/resnet_v2_50.ckpt'
 server_check = '/data_set/check/inception_v2.ckpt'
 
-local_save = '/home/dsl/all_check/obj_detect/lvcai_gn_aug_101'
+local_save = '/home/dsl/all_check/obj_detect/lvcai_50_05'
 server_save = '/data_set/check/voc_ssd_yolo'
 
-is_use_group_norm = True
+is_use_group_norm = False
 is_use_last = True
 if not is_use_last:
     feature_stride = [8, 16, 32,64,128]

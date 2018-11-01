@@ -1,5 +1,6 @@
 import tensorflow as tf
 import utils
+import config
 def smooth_l1_loss(y_true, y_pred):
     """Implements Smooth-L1 loss.
     y_true and y_pred are typicallly: [N, 4], but could be any shape.
@@ -16,16 +17,39 @@ def soft_focal_loss(logits,labels,number_cls=20):
 
 def rpn_class_loss_graph(rpn_match, rpn_class_logits):
 
-
     anchor_class = tf.cast(tf.equal(rpn_match, 1), tf.int32)
+    total_pos = tf.reduce_sum(anchor_class)
+
     indices = tf.where(tf.not_equal(rpn_match, -1))
     rpn_class_logits = tf.gather_nd(rpn_class_logits, indices)
     anchor_class = tf.gather_nd(anchor_class, indices)
     loss = soft_focal_loss(labels=anchor_class,logits=rpn_class_logits ,number_cls=2)
-    loss = tf.keras.backend.switch(tf.cast(tf.size(loss) > 0,tf.bool), tf.reduce_mean(loss), tf.constant(0.0))
+    loss = tf.keras.backend.switch(tf.cast(tf.size(loss) > 0,tf.bool), tf.reduce_sum(loss)/tf.cast(total_pos,tf.float32), tf.constant(0.0))
     return loss
 
+def rpn_class_loss_multi_task(rpn_match, rpn_class_logits):
+    total_loss = []
+    for x in range(config.batch_size):
+        b_rpn_match = rpn_match[x]
+        b_rpn_logits = rpn_class_logits[x]
+        anchor_class = tf.cast(tf.greater(b_rpn_match, 0), tf.int32)
+        pos_num = tf.reduce_sum(anchor_class)
+        indices_neg = tf.where(tf.equal(b_rpn_match, 0))
+        indices_pos = tf.where(tf.greater(b_rpn_match, 0))
+        indices_neg = tf.random_shuffle(indices_neg)[:3*pos_num]
+        total_index = tf.concat([indices_neg, indices_pos],axis=0)
+
+        b_rpn_class_logits = tf.gather(b_rpn_logits, total_index)
+        anchor_class = tf.gather(anchor_class, total_index)
+
+        loss = soft_focal_loss(labels=anchor_class,logits=b_rpn_class_logits ,number_cls=2)
+        loss = tf.keras.backend.switch(tf.cast(tf.size(loss) > 0,tf.bool), tf.reduce_sum(loss), tf.constant(0.0))
+        loss = loss/(tf.cast(pos_num, tf.float32)+1e-5)
+        total_loss.append(loss)
+    return tf.reduce_mean(total_loss)
+
 def rpn_class_loss_graph1(rpn_match, rpn_class_logits):
+
 
     anchor_class = tf.cast(tf.equal(rpn_match, 1), tf.int32)
 
@@ -37,12 +61,11 @@ def rpn_class_loss_graph1(rpn_match, rpn_class_logits):
     return loss
 
 def rpn_bbox_loss_graph( input_rpn_deltas, input_rpn_label, pred_rpn_deltas):
-
     input_rpn_deltas = tf.reshape(input_rpn_deltas,(-1,4))
     pred_rpn_deltas = tf.reshape(pred_rpn_deltas, (-1,4))
     input_rpn_label = tf.reshape(input_rpn_label, (-1,))
 
-    indices = tf.where(tf.equal(input_rpn_label, 1))
+    indices = tf.where(tf.greater(input_rpn_label, 0))
 
     true_rpn_delatas = tf.gather(input_rpn_deltas, indices)
     pred_rpn_deltas = tf.gather(pred_rpn_deltas, indices)
@@ -62,12 +85,9 @@ def mrcnn_class_loss_graph(target_class_ids, pred_class_logits, rois):
     target_class_ids = tf.cast(target_class_ids, 'int64')
     target_class_ids = tf.gather(target_class_ids, idx)
     pred_class_logits = tf.gather(pred_class_logits, idx)
-
+    pos_num = tf.reduce_sum(tf.cast(tf.greater(target_class_ids,0),tf.int32))
     loss = soft_focal_loss(labels=target_class_ids, logits=pred_class_logits, number_cls=11)
-
-    loss = tf.keras.backend.switch(tf.cast(tf.size(loss) > 0, tf.bool), tf.reduce_mean(loss), tf.constant(0.0))
-
-
+    loss = tf.keras.backend.switch(tf.cast(tf.size(loss) > 0, tf.bool), tf.reduce_sum(loss)/tf.cast(pos_num,tf.float32), tf.constant(0.0))
 
     return loss
 

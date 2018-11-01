@@ -88,6 +88,7 @@ def train():
                       ' ' + 'rpn_class_loss:' + str(tg[0]) +
                       ' ' + 'rpn_loc_loss:' + str(tg[1])+
                       ' ' + 'class_loss:' + str(tg[2])+
+                      ' ' + 'bbox_loss:' + str(tg[3])+
                       ' ' + 'total_loss:' + str(ls)
                       )
                 summaries = sess.run(sum_op, feed_dict=feed_dict)
@@ -99,11 +100,11 @@ def detect():
     cfg.NMS_ROIS_TRAINING = 1000
     ig = tf.placeholder(shape=(1, config.image_size[0], config.image_size[1], 3), dtype=tf.float32)
     wind = tf.placeholder(shape=(4, 1), dtype=tf.float32)
-    detections = fpn_faster_rcnn.predict(images=ig, window=wind)
+    detections = fpn_faster_rcnn.predict1(images=ig, window=wind)
     saver = tf.train.Saver()
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_faster/model.ckpt-4541')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_faster_new/model.ckpt-32748')
         for ip in glob.glob(
                 '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/r2testb/*.jpg'):
             print(ip)
@@ -178,4 +179,4 @@ def tt():
 
 
 
-detect1()
+detect()
