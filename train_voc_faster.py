@@ -14,7 +14,7 @@ from dsl_data.utils import resize_image_fixed_size
 from faster_rcnn_config import config_instace as cfg
 import config
 from dsl_data import data_loader_multi
-from models import fpn_faster_rcnn
+from models import light_head
 def train():
     pl_images = tf.placeholder(shape=[config.batch_size, config.image_size[0], config.image_size[1], 3], dtype=tf.float32)
     pl_gt_boxs = tf.placeholder(shape=[config.batch_size, 100, 4], dtype=tf.float32)
@@ -179,4 +179,4 @@ def tt():
 
 
 
-detect()
+train()

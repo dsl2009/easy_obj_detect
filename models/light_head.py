@@ -11,6 +11,7 @@ from faster_rcnn_config import config_instace as cfg
 from base_model import resnet50
 from losses import rcnn_losses as losses
 import config
+from libs.lib_psalign_pooling.psalign_pooling_op import psalign_pool
 def rpn_graph(feature_map, anchors_per_location=config.aspect_num[0]):
     shared = slim.conv2d(feature_map, 512, 3, activation_fn=slim.nn.relu)
     x = slim.conv2d(shared, 2 * anchors_per_location, kernel_size=1, padding='VALID', activation_fn=None)
@@ -22,6 +23,40 @@ def rpn_graph(feature_map, anchors_per_location=config.aspect_num[0]):
     return [rpn_class_logits, rpn_probs, rpn_bbox]
 
 
+def rpn_arges():
+    with slim.arg_scope(
+            [slim.conv2d],
+            weights_regularizer=slim.l2_regularizer(0.0001),
+            activation_fn=tf.nn.relu,
+            trainable=True,
+            padding = 'SAME') as sc:
+        return sc
+
+
+def rpn_net(fpn,num_anchors):
+    with slim.arg_scope(rpn_arges()):
+        rpn = slim.conv2d(fpn, 512, 3, scope="rpn_conv/3x3")
+        rpn_cls_score = slim.conv2d(rpn, num_anchors * 2, 1,  padding='VALID',activation_fn=None, scope='rpn_cls_score')
+        rpn_bbox_pred = slim.conv2d(rpn, num_anchors * 4, 1, padding='VALID', activation_fn=None, scope='rpn_bbox_pred')
+        rpn_class_logits = tf.reshape(rpn_cls_score, shape=[tf.shape(rpn)[0], -1, 2])
+        rpn_probs = slim.nn.softmax(rpn_class_logits)
+        rpn_bbox = tf.reshape(rpn_bbox_pred, shape=[tf.shape(rpn)[0], -1, 4])
+    return rpn_class_logits, rpn_probs, rpn_bbox
+
+
+def global_context_module(bottom, prefix='', ks=15, chl_mid=256, chl_out=1024):
+    with slim.arg_scope( [slim.conv2d],
+            weights_regularizer=slim.l2_regularizer(0.0001),
+            activation_fn=None,
+            initializer=tf.random_normal_initializer(mean=0.0, stddev=0.01),
+            trainable=True,
+            padding = 'SAME'):
+        col_max = slim.conv2d(bottom, chl_mid, [ks, 1],scope=prefix + '_conv%d_w_pre' % ks)
+        col = slim.conv2d(col_max, chl_out, [1, ks],scope=prefix + '_conv%d_w' % ks)
+        row_max = slim.conv2d(bottom, chl_mid, [1, ks], scope=prefix + '_conv%d_h_pre' % ks)
+        row = slim.conv2d(row_max, chl_out, [ks, 1],scope=prefix + '_conv%d_h' % ks)
+        s = row + col
+        return s
 
 def get_rpns(fp):
     rpn_c_l = []
@@ -38,7 +73,13 @@ def get_rpns(fp):
     return rpn_class_logits, rpn_probs, rpn_bbox
 
 
-
+def covert(rois):
+    nn = []
+    for x in range(config.batch_size):
+        b = rois[x]
+        idx = tf.ones([tf.shape(b)[0], 1]) * x
+        nn.append(tf.concat([idx, b], axis=1))
+    return tf.concat(nn, axis=0)
 
 def propsal(rpn_probs, rpn_bbox):
     scores = rpn_probs[:, :, 1]
@@ -77,7 +118,6 @@ def detection_target(input_proposals, input_gt_class_ids, input_gt_boxes):
         gt_boxes, non_zeros = utils.trim_zeros(gt_boxes, name="trim_gt_boxes")
         gt_class_ids = tf.boolean_mask(gt_class_ids, non_zeros,
                                        name="trim_gt_class_ids")
-
         non_crowd_ix = tf.where(gt_class_ids > 0)[:, 0]
         gt_class_ids = tf.gather(gt_class_ids, non_crowd_ix)
         gt_boxes = tf.gather(gt_boxes, non_crowd_ix)
@@ -130,10 +170,6 @@ def detection_target(input_proposals, input_gt_class_ids, input_gt_boxes):
 
     return tf.stack(roiss, axis=0), tf.stack(roi_gt_class_idss, axis=0), tf.stack(deltass, axis=0)
 
-
-
-
-
 def fpn_classifier_graph(rois, feature_maps):
     roiis = utils.roi_align(rois, feature_maps, cfg)
     x = slim.conv2d(roiis, 256, kernel_size=cfg.pool_shape, padding='VALID')
@@ -151,21 +187,45 @@ def fpn_classifier_graph(rois, feature_maps):
     #mrcnn_bbox = tf.reshape(x, shape=(-1, 4))
     return mrcnn_class_logits, mrcnn_probs, mrcnn_bbox
 
+def ps_roi_allign(rois, net5, num_cls = 11):
+    initializer = tf.random_normal_initializer(mean=0.0, stddev=0.01)
+    initializer_bbox = tf.random_normal_initializer(mean=0.0, stddev=0.001)
+    rois = covert(rois)
+    ps_chl = 7*7*10
+    ps_fm = global_context_module(
+        net5, prefix='conv_new_1',
+        ks=15, chl_mid=256, chl_out=ps_chl)
+    ps_fm = tf.nn.relu(ps_fm)
+
+    [psroipooled_rois, _, _] = psalign_pool(
+        ps_fm, rois, group_size=7,
+        sample_height=2, sample_width=2, spatial_scale=1.0 / 16.0)
+    psroipooled_rois = slim.flatten(psroipooled_rois)
+
+    ps_fc_1 = slim.fully_connected(
+        psroipooled_rois, 2048, weights_initializer=initializer,
+        activation_fn=tf.nn.relu, trainable=True, scope='ps_fc_1')
+    cls_score = slim.fully_connected(
+        ps_fc_1, num_cls, weights_initializer=initializer,
+        activation_fn=None, trainable=True, scope='cls_fc')
+    bbox_pred = slim.fully_connected(
+        ps_fc_1, 4 * num_cls, weights_initializer=initializer_bbox,
+        activation_fn=None, trainable=True, scope='bbox_fc')
+    cls_prob = tf.nn.softmax(cls_score, "cls_prob")
+    return cls_prob, cls_score,  bbox_pred
 
 
 def get_train_tensor(images, input_rpn_match,input_rpn_bbox, gt_label, gt_boxs):
-    _, fp = resnet50.fpn_retin_det(images)
-    rpn_class_logits, rpn_probs, rpn_bbox = get_rpns(fp)
+    net4, net5 = resnet50.fpn_light_head(images)
+    rpn_class_logits, rpn_probs, rpn_bbox = rpn_net(net4, num_anchors=config.aspect_num[0])
     propsal_box = propsal(rpn_probs, rpn_bbox)
     rois, target_class_ids, target_deltas = detection_target(propsal_box, gt_label, gt_boxs)
 
-    rcnn_class_logits, rcnn_class, rcnn_bbox_deltas = fpn_classifier_graph(rois, fp)
-
+    cls_prob, cls_score, bbox_pred = ps_roi_allign(rois, net5)
     rpn_class_loss = losses.rpn_class_loss_graph(input_rpn_match, rpn_class_logits)
     rpn_bbox_loss = losses.rpn_bbox_loss_graph(input_rpn_bbox, input_rpn_match, rpn_bbox)
-
-    class_loss = losses.mrcnn_class_loss_graph(target_class_ids, rcnn_class_logits, rois)
-    bbox_loss = losses.mrcnn_bbox_loss_graph(target_deltas, target_class_ids, rcnn_bbox_deltas)
+    class_loss = losses.mrcnn_class_loss_graph(target_class_ids, cls_score, rois)
+    bbox_loss = losses.mrcnn_bbox_loss_graph(target_deltas, target_class_ids, bbox_pred)
 
     tf.losses.add_loss(rpn_class_loss)
     tf.losses.add_loss(rpn_bbox_loss)
