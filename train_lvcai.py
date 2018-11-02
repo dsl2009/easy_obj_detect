@@ -90,7 +90,7 @@ def detect():
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_50_05/model.ckpt-11950')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_50_05/model.ckpt-21191')
         images_path = sorted(glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/r2testb/*.jpg'))
         for ip in images_path:
             name = ip.split('/')[-1]
@@ -98,7 +98,7 @@ def detect():
             img = cv2.imread(ip)
             imgss = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             org, window, scale, padding, crop = resize_image_fixed_size(imgss,config.image_size)
-            img = org - [123.15, 115.90, 103.06]
+            img = (org - [123.15, 115.90, 103.06])/255.0
             img = np.expand_dims(img, axis=0)
             t = time.time()
             bx,sc,p= sess.run([box,score,pp],feed_dict={imgs:img})
@@ -107,7 +107,7 @@ def detect():
             cls = []
             scores = []
             for s in range(len(p)):
-                if sc[s]>=0.4:
+                if sc[s]>=0.3:
                     bxx.append(bx[s])
                     cls.append(p[s])
                     scores.append(sc[s])
@@ -139,4 +139,4 @@ def detect():
             f.write(json.dumps(data))
             f.flush()
 
-train()
+detect()

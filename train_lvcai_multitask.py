@@ -112,7 +112,7 @@ def detect():
             cls = []
             scores = []
             for s in range(len(p)):
-                if sc[s]>=0.3:
+                if sc[s]>=0.9:
                     bxx.append(bx[s])
                     cls.append(p[s])
                     scores.append(sc[s])
@@ -144,4 +144,4 @@ def detect():
             f.write(json.dumps(data))
             f.flush()
 
-train()
+detect()

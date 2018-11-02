@@ -1,5 +1,6 @@
 from nets.resnet_v2 import resnet_v2_block,resnet_v2,resnet_arg_scope
 import tensorflow as tf
+from nets.resnet_v1 import resnet_v1_101
 from tensorflow.contrib import slim
 import config
 def resnet_arg_scope_batch_norm(weight_decay=0.0001,
@@ -215,3 +216,12 @@ def fpn_retin_det(img):
         b1 = slim.conv2d(b1, 256, kernel_size=3, stride=1, activation_fn=tf.nn.relu)
         bn = [b1, b2, b3, b4, b5]
         return cn,bn
+
+def fpn_light_head(img):
+    with slim.arg_scope(base_arg()):
+        _, endpoint = resnet_v2_50(img)
+    c1 = endpoint['resnet_v2_50/block1']
+    c2 = endpoint['resnet_v2_50/block2']
+    c3 = endpoint['resnet_v2_50/block3']
+    c4 = endpoint['resnet_v2_50/block4']
+    return c3,c4
