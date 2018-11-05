@@ -14,6 +14,8 @@ import time
 from data_set import data_gen
 import json
 from dsl_data import data_loader_multi
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 def train():
     img = tf.placeholder(shape=[config.batch_size, config.image_size[0], config.image_size[1], 3], dtype=tf.float32)
     loc = tf.placeholder(shape=[config.batch_size, config.total_anchor_num, 4], dtype=tf.float32)
@@ -90,7 +92,7 @@ def detect():
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_50_05/model.ckpt-21191')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_nn_05/model.ckpt-161805')
         images_path = sorted(glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/r2testb/*.jpg'))
         for ip in images_path:
             name = ip.split('/')[-1]
@@ -107,7 +109,7 @@ def detect():
             cls = []
             scores = []
             for s in range(len(p)):
-                if sc[s]>=0.3:
+                if sc[s]>=0.4:
                     bxx.append(bx[s])
                     cls.append(p[s])
                     scores.append(sc[s])
@@ -116,7 +118,7 @@ def detect():
                 #bxx = np.asarray(bxx)*np.asarray([config.image_size[1],config.image_size[0],config.image_size[1],config.image_size[0]])
                 #visual.display_instances_title(org, np.asarray(bxx), class_ids=np.asarray(cls),class_names=config.VOC_CLASSES,scores=scores)
                 bxx = np_utils.revert_image(scale, padding, config.image_size, bxx)
-                visual.display_instances_title(imgss, bxx, class_ids=np.asarray(cls),class_names=config.Lvcai,scores=scores)
+                #visual.display_instances_title(imgss, bxx, class_ids=np.asarray(cls),class_names=config.Lvcai,scores=scores)
                 for ix, b in enumerate(bxx):
                     dd = {
                         'xmin':int(b[0]),

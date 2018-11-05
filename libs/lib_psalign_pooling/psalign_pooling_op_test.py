@@ -8,7 +8,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
 # pdb.set_trace()
 
-rois = tf.convert_to_tensor([[1, 0, 0, 4, 4], [1, 0, 0, 2, 4], [
+rois = tf.convert_to_tensor([[0, 0, 0, 4, 4], [1, 0, 0, 2, 4], [
                             0, 0, 0, 1, 1]], dtype=tf.float32)
 hh = tf.convert_to_tensor(np.random.rand(1, 5, 5, 25*4), dtype=tf.float32)
 #hh= tf.transpose(hh, [0, 3, 1, 2])
@@ -21,6 +21,5 @@ hh = tf.convert_to_tensor(np.random.rand(1, 5, 5, 25*4), dtype=tf.float32)
 sess = tf.Session(config=tf.ConfigProto(log_device_placement=False))
 
 ny2, nch, nmax = sess.run([y2, channels, argmax_position])
-print(ny2)
-print(nch)
-print(nmax)
+print(ny2.shape)
+print(ny2.shape)

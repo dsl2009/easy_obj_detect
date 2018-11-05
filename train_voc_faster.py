@@ -15,6 +15,8 @@ from faster_rcnn_config import config_instace as cfg
 import config
 from dsl_data import data_loader_multi
 from models import light_head
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 def train():
     pl_images = tf.placeholder(shape=[config.batch_size, config.image_size[0], config.image_size[1], 3], dtype=tf.float32)
     pl_gt_boxs = tf.placeholder(shape=[config.batch_size, 100, 4], dtype=tf.float32)
@@ -22,7 +24,7 @@ def train():
     pl_input_rpn_match = tf.placeholder(shape=[config.batch_size, config.total_anchor_num], dtype=tf.int32)
     pl_input_rpn_bbox = tf.placeholder(shape=[config.batch_size, config.total_anchor_num, 4], dtype=tf.float32)
 
-    train_tensors, ta_gt, _ = fpn_faster_rcnn.get_train_tensor(pl_images,  pl_input_rpn_match,pl_input_rpn_bbox, pl_label,pl_gt_boxs)
+    train_tensors, ta_gt, _ = light_head.get_train_tensor(pl_images,  pl_input_rpn_match,pl_input_rpn_bbox, pl_label,pl_gt_boxs)
 
     gen_bdd = data_gen.get_batch(batch_size=config.batch_size, class_name='lvcai', image_size=config.image_size,
                                  max_detect=100,is_rcnn=True)
@@ -41,7 +43,6 @@ def train():
     train_op = slim.learning.create_train_op(train_tensors, optimizer)
     vbs = []
     for s in slim.get_variables():
-        print(s.name)
         if 'resnet_v2_50' in s.name and 'Momentum' not in s.name and 'GroupNorm' not in s.name:
             print(s.name)
             vbs.append(s)
@@ -61,7 +62,7 @@ def train():
             images, true_box, true_label = q.get()
 
 
-            rpn_label, rpn_box = np_utils.build_rpn_targets(true_box, true_label, batch_size=config.batch_size,
+            rpn_label, rpn_box = np_utils.build_rpn_targets_light_head(true_box, true_label, batch_size=config.batch_size,
                                                         cfg=config.Config)
 
             t1 = np.zeros(shape=true_box.shape, dtype=np.float32)
@@ -100,11 +101,11 @@ def detect():
     cfg.NMS_ROIS_TRAINING = 1000
     ig = tf.placeholder(shape=(1, config.image_size[0], config.image_size[1], 3), dtype=tf.float32)
     wind = tf.placeholder(shape=(4, 1), dtype=tf.float32)
-    detections = fpn_faster_rcnn.predict1(images=ig, window=wind)
+    detections,pp = light_head.predict1(images=ig, window=wind)
     saver = tf.train.Saver()
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_faster_new/model.ckpt-32748')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_light_head_05/model.ckpt-8526')
         for ip in glob.glob(
                 '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/r2testb/*.jpg'):
             print(ip)
@@ -118,13 +119,15 @@ def detect():
             img = org - [123.15, 115.90, 103.06]
             img = np.expand_dims(img, axis=0)
             t = time.time()
-            detects = sess.run([detections], feed_dict={ig: img, wind: window})
-            arr = detects[0]
-            print(arr.shape)
+            detects,p = sess.run([detections,pp], feed_dict={ig: img, wind: window})
+            #arr = detects[0]
+            print(detects)
+            print(p)
+            print(np.argmax(p,axis=1))
+            print(np.max(p,axis=1))
+            ix = np.where(np.sum(detects, axis=1) > 0)
 
-            ix = np.where(np.sum(arr, axis=1) > 0)
-
-            box = arr[ix]
+            box = detects[ix]
             boxes = box[:, 0:4]
             label = box[:, 4]
             score = box[:, 5]
@@ -138,11 +141,11 @@ def detect1():
     cfg.NMS_ROIS_TRAINING = 1000
     ig = tf.placeholder(shape=(1, config.image_size[0], config.image_size[1], 3), dtype=tf.float32)
     wind = tf.placeholder(shape=(4, 1), dtype=tf.float32)
-    bbox, scores, classes = fpn_faster_rcnn.predict(images=ig, window=wind)
+    bbox, scores, classes = light_head.predict(images=ig, window=wind)
     saver = tf.train.Saver()
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/new_faster/model.ckpt-5631')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_light_head_05/model.ckpt-8526')
         for ip in glob.glob(
                 '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/r2testb/*.jpg'):
             print(ip)
@@ -157,6 +160,7 @@ def detect1():
             img = np.expand_dims(img, axis=0)
             t = time.time()
             p_box, p_score, p_class = sess.run([bbox, scores, classes], feed_dict={ig: img, wind: window})
+            print(p_box)
             if p_box.shape[0] > 0:
                 #bxx = np.asarray(bxx)*np.asarray([config.image_size[1],config.image_size[0],config.image_size[1],config.image_size[0]])
                 #visual.display_instances_title(org, np.asarray(bxx), class_ids=np.asarray(cls),class_names=config.VOC_CLASSES,scores=scores)

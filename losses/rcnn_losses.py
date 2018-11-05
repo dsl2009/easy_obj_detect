@@ -93,7 +93,7 @@ def mrcnn_class_loss_graph(target_class_ids, pred_class_logits, rois):
 
 
 def mrcnn_bbox_loss_graph(target_bbox, target_class_ids, pred_bbox):
-
+    pred_bbox = tf.reshape(pred_bbox,shape=(config.batch_size,-1, 4))
     target_class_ids = tf.reshape(target_class_ids, (-1,))
     target_bbox = tf.reshape(target_bbox, (-1, 4))
 
@@ -112,6 +112,9 @@ def mrcnn_bbox_loss_graph(target_bbox, target_class_ids, pred_bbox):
                     tf.constant(0.0))
     loss = tf.reduce_mean(loss)
     return loss
+
+
+
 
 def mrcnn_bbox_loss_graph_dsl(target_bbox, target_class_ids, pred_bbox):
 

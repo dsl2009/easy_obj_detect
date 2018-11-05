@@ -11,7 +11,7 @@ from faster_rcnn_config import config_instace as cfg
 from base_model import resnet50
 from losses import rcnn_losses as losses
 import config
-from libs.lib_psalign_pooling.psalign_pooling_op import psalign_pool
+from libs.lib_psalign_pooling import psalign_pooling_op, psalign_pooling_op_grad
 def rpn_graph(feature_map, anchors_per_location=config.aspect_num[0]):
     shared = slim.conv2d(feature_map, 512, 3, activation_fn=slim.nn.relu)
     x = slim.conv2d(shared, 2 * anchors_per_location, kernel_size=1, padding='VALID', activation_fn=None)
@@ -48,7 +48,7 @@ def global_context_module(bottom, prefix='', ks=15, chl_mid=256, chl_out=1024):
     with slim.arg_scope( [slim.conv2d],
             weights_regularizer=slim.l2_regularizer(0.0001),
             activation_fn=None,
-            initializer=tf.random_normal_initializer(mean=0.0, stddev=0.01),
+            weights_initializer =tf.random_normal_initializer(mean=0.0, stddev=0.01),
             trainable=True,
             padding = 'SAME'):
         col_max = slim.conv2d(bottom, chl_mid, [ks, 1],scope=prefix + '_conv%d_w_pre' % ks)
@@ -197,7 +197,7 @@ def ps_roi_allign(rois, net5, num_cls = 11):
         ks=15, chl_mid=256, chl_out=ps_chl)
     ps_fm = tf.nn.relu(ps_fm)
 
-    [psroipooled_rois, _, _] = psalign_pool(
+    [psroipooled_rois, _, _] = psalign_pooling_op.psalign_pool(
         ps_fm, rois, group_size=7,
         sample_height=2, sample_width=2, spatial_scale=1.0 / 16.0)
     psroipooled_rois = slim.flatten(psroipooled_rois)
@@ -211,7 +211,7 @@ def ps_roi_allign(rois, net5, num_cls = 11):
     bbox_pred = slim.fully_connected(
         ps_fc_1, 4 * num_cls, weights_initializer=initializer_bbox,
         activation_fn=None, trainable=True, scope='bbox_fc')
-    cls_prob = tf.nn.softmax(cls_score, "cls_prob")
+    cls_prob = tf.nn.softmax(cls_score)
     return cls_prob, cls_score,  bbox_pred
 
 
@@ -222,8 +222,11 @@ def get_train_tensor(images, input_rpn_match,input_rpn_bbox, gt_label, gt_boxs):
     rois, target_class_ids, target_deltas = detection_target(propsal_box, gt_label, gt_boxs)
 
     cls_prob, cls_score, bbox_pred = ps_roi_allign(rois, net5)
+
+
     rpn_class_loss = losses.rpn_class_loss_graph(input_rpn_match, rpn_class_logits)
     rpn_bbox_loss = losses.rpn_bbox_loss_graph(input_rpn_bbox, input_rpn_match, rpn_bbox)
+
     class_loss = losses.mrcnn_class_loss_graph(target_class_ids, cls_score, rois)
     bbox_loss = losses.mrcnn_bbox_loss_graph(target_deltas, target_class_ids, bbox_pred)
 
@@ -250,25 +253,26 @@ def get_train_tensor(images, input_rpn_match,input_rpn_bbox, gt_label, gt_boxs):
 
 
 def predict1(images, window):
-    _, fp = resnet50.fpn_retin_det(images)
-    rpn_class_logits, rpn_probs, rpn_bbox = get_rpns(fp)
+    net4, net5 = resnet50.fpn_light_head(images)
+    rpn_class_logits, rpn_probs, rpn_bbox = rpn_net(net4, num_anchors=config.aspect_num[0])
     propsal_box = propsal(rpn_probs, rpn_bbox)
+    cls_prob, cls_score, bbox_pred = ps_roi_allign(propsal_box, net5)
 
-    mrcnn_class_logits, mrcnn_class, mrcnn_bbox = fpn_classifier_graph(propsal_box, fp)
-    detections = utils.refine_detections_graph(propsal_box, mrcnn_class, mrcnn_bbox, window, cfg)
+    bbox_pred = tf.reshape(bbox_pred, shape=(-1,11,4))
+    detections = utils.refine_detections_graph(propsal_box, cls_prob, bbox_pred, window, cfg)
 
-    return detections
+    return detections, cls_prob
 def predict(images, window):
-    fp = resnet50.fpn(images)
-    rpn_class_logits, rpn_probs, rpn_bbox = get_rpns(fp)
+    net4, net5 = resnet50.fpn_light_head(images)
+    rpn_class_logits, rpn_probs, rpn_bbox = rpn_net(net4, num_anchors=config.aspect_num[0])
     propsal_box = propsal(rpn_probs, rpn_bbox)
 
-    mrcnn_class_logits, mrcnn_class, mrcnn_bbox = fpn_classifier_graph(propsal_box, fp)
+    cls_prob, cls_score, bbox_pred = ps_roi_allign(propsal_box, net5)
     propsal_box = tf.squeeze(propsal_box,0)
-    pp = mrcnn_class[:, 1:]
+    pp = cls_prob[:, 1:]
     cls = tf.argmax(pp, axis=1)
     pp = tf.reduce_max(pp, axis=1)
-    ix = tf.where(tf.greater(pp, 0.5))[:, 0]
+    ix = tf.where(tf.greater(pp, 0.3))[:, 0]
 
     score = tf.gather(pp, ix)
     box = tf.gather(propsal_box, ix)

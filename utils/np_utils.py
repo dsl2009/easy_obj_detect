@@ -217,6 +217,50 @@ def build_rpn_targets(true_box, true_label,batch_size = 4,cfg = None):
 
 
 
+def build_rpn_targets_light_head(true_box, true_label,batch_size = 4,cfg = None):
+    rpn_nums = 256
+    anchors = pri = config.anchor_gen(config.image_size)
+    num_priors = anchors.shape[0]
+    rpn_box = np.zeros([batch_size, num_priors, 4])
+    rpn_labels = np.zeros([batch_size, num_priors])
+    for s in range(batch_size):
+        true_box_tm = true_box[s]
+        labels = true_label[s]
+        ix = (true_box_tm[:, 2] - true_box_tm[:, 0]) * (true_box_tm[:, 3] - true_box_tm[:, 1])
+        true_box_tm = true_box_tm[np.where(ix > 1e-6)]
+        labels = labels[np.where(ix > 1e-6)]
+        overlaps = over_laps(true_box_tm, pt_from(anchors))
+        anchor_iou_argmax = np.argmax(overlaps, axis=1)
+        anchor_iou_max = overlaps[np.arange(overlaps.shape[0]), anchor_iou_argmax]
+        gt_iou_argmax = np.argmax(overlaps, axis=0)
+        ops = over_laps(true_box_tm, pt_from(anchors))
+        best_true = np.max(ops, axis=0)
+        best_true_idx = np.argmax(ops, axis=0)
+        best_prior = np.max(ops, axis=1)
+        best_prior_idx = np.argmax(ops, axis=1)
+        for j in range(best_prior_idx.shape[0]):
+            best_true_idx[best_prior_idx[j]] = j
+            best_true[best_prior_idx[j]] = 1.0
+
+        matches = true_box_tm[best_true_idx]
+        conf = labels[best_true_idx] + 1
+        conf[best_true>0.5] = 1
+        conf[best_true <= 0.3] = 0
+        b1 = best_true > 0.3
+        b2 = best_true <= 0.5
+        conf[b1 * b2] = -1
+        cho = np.where(conf==0)[0]
+        np.random.shuffle(cho)
+        pos_num = len(np.where(conf>0)[0])
+        ne_num = pos_num*3
+        n_idx = cho[ne_num:]
+        conf[n_idx] = -1
+
+        loc = encode(matches, anchors, variances=[0.1, 0.2])
+
+        rpn_box[s] = loc
+        rpn_labels[s] = conf
+    return rpn_labels, rpn_box
 
 
 
