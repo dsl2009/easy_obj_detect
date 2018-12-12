@@ -16,17 +16,20 @@ import json
 from dsl_data import data_loader_multi
 import os
 from matplotlib import pyplot as plt
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 def train():
     img = tf.placeholder(shape=[config.batch_size, config.image_size[0], config.image_size[1], 3], dtype=tf.float32)
     mask = tf.placeholder(shape=[config.batch_size, config.image_size[0], config.image_size[1], 1], dtype=tf.float32)
     loc = tf.placeholder(shape=[config.batch_size, config.total_anchor_num, 4], dtype=tf.float32)
     conf = tf.placeholder(shape=[config.batch_size, config.total_anchor_num], dtype=tf.float32)
 
+
+
     pred_loc, pred_confs, out_put, out_put_mask = get_box_logits(img,config)
     train_tensors = get_loss(conf, loc, pred_loc, pred_confs,config, out_put, mask)
-    gen_bdd = data_gen.get_batch_mask(batch_size=config.batch_size,class_name='guoshu',image_size=config.image_size,max_detect=100)
-    q = data_loader_multi.get_thread(gen=gen_bdd,thread_num=2)
+
+    gen_bdd = data_gen.get_batch_mask(batch_size=config.batch_size,class_name='land',image_size=config.image_size,max_detect=100)
+    #q = data_loader_multi.get_thread(gen=gen_bdd,thread_num=2)
     global_step = slim.get_or_create_global_step()
     lr = tf.train.exponential_decay(
         learning_rate=0.001,
@@ -34,11 +37,8 @@ def train():
         decay_steps=10000,
         decay_rate=0.7,
         staircase=True)
-
-    ig = img+ tf.constant(value=np.asarray([123.15, 115.90, 103.06])/255.0,dtype=tf.float32)
     tf.summary.image('target_mask', mask)
     tf.summary.image('pred_masks', out_put_mask)
-    tf.summary.image('ig', ig)
     tf.summary.scalar('lr', lr)
     sum_op = tf.summary.merge_all()
     optimizer = tf.train.MomentumOptimizer(learning_rate=lr,momentum=0.9)
@@ -60,7 +60,7 @@ def train():
         for step in range(1000000):
             print('       '+' '.join(['*']*(step%10)))
             t = time.time()
-            images, true_box, true_label, maskes = q.get()
+            images, true_box, true_label, maskes = next(gen_bdd)
             try:
                 loct, conft = np_utils.get_loc_conf_new(true_box, true_label, batch_size=config.batch_size,cfg=config.Config)
             except:
@@ -72,9 +72,8 @@ def train():
             if step % 10 == 0:
                 print('step:' + str(step) +
                       ' ' + 'class_loss:' + str(ls[0]) +
-                      ' ' + 'loc_loss:' + str(ls[1])
-                      #' ' + 'mask_loss:' + str(ls[2])+
-                      #' ' + 'dice_loss:' + str(ls[3])
+                      ' ' + 'loc_loss:' + str(ls[1])+
+                      ' ' + 'mask_loss:' + str(ls[2])
                       )
                 summaries = sess.run(sum_op, feed_dict=feed_dict)
                 sv.summary_computed(sess, summaries)
@@ -82,7 +81,7 @@ def train():
 
 def detect():
     config.batch_size = 1
-    config.image_size = [512, 512]
+    config.image_size = [256, 256]
     imgs = tf.placeholder(shape=(1, config.image_size[0], config.image_size[1], 3), dtype=tf.float32,name='input_tensor')
     tf.add_to_collection('input_image',imgs)
 
@@ -96,13 +95,13 @@ def detect():
     saver = tf.train.Saver()
     total_bxx = []
 
-    builder = tf.saved_model.builder.SavedModelBuilder('server/export')
+    #builder = tf.saved_model.builder.SavedModelBuilder('server/export')
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/guoshu_mask_dice1/model.ckpt-43628')
-        builder.add_meta_graph_and_variables(sess, ['tag_string'])
-        builder.save()
-        images_path = sorted(glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/AIChallenger2018/zuixin/be224/180f5da4-b570-4df3-8e1c-db221983039a/*.png'))
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/land_mask_nn/model.ckpt-2709')
+        #builder.add_meta_graph_and_variables(sess, ['tag_string'])
+        #builder.save()
+        images_path = sorted(glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/xair/land/*.png'))
         for ip in images_path:
             name = ip.split('/')[-1]
             print(name)

@@ -1,7 +1,7 @@
 import numpy as np
 from utils.anchors_gen import gen_ssd_anchors, gen_ssd_anchors_lvcai, gen_ssd_anchors_new,gen_anchors_light_head
 remove_norm = {
-    'num_classes': 11,
+    'num_classes': 2,
     'feature_maps': [64, 32, 16,8,4],
     'steps': [8, 16, 32,64,128],
     'min_sizes': [10 , 50 ,165 ],
@@ -36,12 +36,13 @@ Lvcai = ['defect0','defect1','defect2','defect3','defect4','defect5','defect6','
 
 Tree = ['tree']
 MAX_GT = 100
-batch_size = 4
-image_size = [896, 1024]
-mask_pool_shape = 28
+batch_size = 8
+image_size = [256, 256]
+mask_pool_shape = [28, 28]
+crop_pool_shape = [14, 14]
 norm_value = 2.0
 mask_weight_loss = 2.0
-mask_train = 100
+mask_train = 50
 flag = 1
 total_fpn = -1
 
@@ -57,7 +58,7 @@ server_coco_ann = '/data_set/data/annotations/instances_train2014.json'
 local_check = '/home/dsl/all_check/resnet_v2_50_2017_04_14/resnet_v2_50.ckpt'
 server_check = '/data_set/check/inception_v2.ckpt'
 
-local_save = '/home/dsl/all_check/obj_detect/lvcai_light_head_05'
+local_save = '/home/dsl/all_check/obj_detect/guoshu_mask_dice_coor256'
 server_save = '/data_set/check/voc_ssd_yolo'
 
 is_use_group_norm = False
@@ -65,17 +66,17 @@ is_use_last = True
 if not is_use_last:
     feature_stride = [8, 16, 32,64,128]
     aspect_num = [9,9,9,9,9]
+    anchors_size = [16, 32, 64, 128, 256]
 else:
-    feature_stride = [8, 16, 32, 64, 128]
-    aspect_num = [18, 18, 18, 18, 18]
-    feature_stride = [ 32]
-    aspect_num = [40]
-    #aspect_num = [9, 9, 9, 9, 9]
+    feature_stride = [4, 8, 16, 32]
+    #aspect_num = [18, 18, 18, 18, 18]
+    #aspect_num = [24, 24, 24, 24, 24]
+    anchors_size = [24, 48, 96, 192]
+    aspect_num = [9, 9, 9, 9]
 
-anchor_gen = gen_anchors_light_head
+anchor_gen = gen_ssd_anchors_new
 
 total_anchor_num = sum([(image_size[0]/x)*(image_size[1]/x)*y for x,y in zip(feature_stride,aspect_num)])
-
 if flag == 1:
     save_dir = local_save
     check_dir = local_check

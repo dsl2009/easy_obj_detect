@@ -4,7 +4,7 @@ import cv2
 import tensorflow as tf
 from tensorflow.contrib import slim
 import os
-
+import config
 def resize_image(image, min_dim=None, max_dim=None, min_scale=None, mode="square"):
 
     # Keep track of image dtype and return results in the same dtype
@@ -345,7 +345,7 @@ def log2_graph(x):
     return tf.log(x) / tf.log(2.0)
 
 
-def roi_align(boxes,feature_maps,cfg):
+def roi_align(boxes,feature_maps):
     #p1 p2 p3 p4 p4
 
     # Assign each ROI to a level in the pyramid based on the ROI area.
@@ -353,7 +353,7 @@ def roi_align(boxes,feature_maps,cfg):
     h = y2 - y1
     w = x2 - x1
     # Use shape of first image. Images in a batch must have the same size.
-    image_shape = cfg.image_size
+    image_shape = config.image_size
     # Equation 1 in the Feature Pyramid Networks paper. Account for
     # the fact that our coordinates are normalized here.
     # e.g. a 224x224 ROI (in pixels) maps to P4
@@ -367,7 +367,7 @@ def roi_align(boxes,feature_maps,cfg):
     # Loop through levels and apply ROI pooling to each. P2 to P5.
     pooled = []
     box_to_level = []
-    for i, level in enumerate(range(5)):
+    for i, level in enumerate(range(4)):
         ix = tf.where(tf.equal(roi_level, level))
         level_boxes = tf.gather_nd(boxes, ix)
 
@@ -391,7 +391,7 @@ def roi_align(boxes,feature_maps,cfg):
         # which is how it's done in tf.crop_and_resize()
         # Result: [batch * num_boxes, pool_height, pool_width, channels]
         pooled.append(tf.image.crop_and_resize(
-            feature_maps[i], level_boxes, box_indices, [cfg.pool_shape,cfg.pool_shape],
+            feature_maps[i], level_boxes, box_indices, config.crop_pool_shape,
             method="bilinear"))
 
     # Pack pooled features into one tensor

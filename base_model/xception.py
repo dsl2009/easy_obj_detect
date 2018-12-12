@@ -1,6 +1,5 @@
 import collections
 import tensorflow as tf
-
 from tensorflow.contrib.slim.nets import resnet_utils
 
 from tensorflow.contrib import slim

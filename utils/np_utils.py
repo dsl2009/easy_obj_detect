@@ -100,7 +100,6 @@ def get_loc_conf_new(true_box, true_label,batch_size = 4,cfg = None):
         best_true_idx = np.argmax(ops, axis=0)
         best_prior = np.max(ops, axis=1)
         best_prior_idx = np.argmax(ops, axis=1)
-
         for j in range(best_prior_idx.shape[0]):
             best_true_idx[best_prior_idx[j]] = j
             best_true[best_prior_idx[j]] = 1.0
@@ -114,6 +113,54 @@ def get_loc_conf_new(true_box, true_label,batch_size = 4,cfg = None):
         loc_t[s] = loc
         conf_t[s] = conf
     return loc_t,conf_t
+
+
+def get_loc_conf_mask_box(true_box, true_mask, true_label,batch_size = 4,cfg = None, mask_shape=[28,28]):
+    pri = config.anchor_gen(config.image_size)
+    num_priors = pri.shape[0]
+    loc_t = np.zeros([batch_size, num_priors, 4])
+    conf_t = np.zeros([batch_size, num_priors])
+    box_t = np.zeros([batch_size, config.MAX_GT, 4])
+    mask_t = np.zeros([batch_size, config.MAX_GT, mask_shape[0], mask_shape[1]])
+
+
+    for s in range(batch_size):
+        true_box_tm = true_box[s]
+        labels = true_label[s]
+        true_mask_tm = true_mask[s]
+
+        ix = (true_box_tm[:, 2]- true_box_tm[:,0])*(true_box_tm[:, 3]- true_box_tm[:,1])
+        true_box_tm = true_box_tm[np.where(ix > 1e-6)]
+        labels = labels[np.where(ix > 1e-6)]
+        true_mask_tm = true_box_tm[np.where(ix > 1e-6)]
+
+        ops = over_laps(true_box_tm, pt_from(pri))
+        best_true = np.max(ops, axis=0)
+        best_true_idx = np.argmax(ops, axis=0)
+        best_prior = np.max(ops, axis=1)
+        best_prior_idx = np.argmax(ops, axis=1)
+        for j in range(best_prior_idx.shape[0]):
+            best_true_idx[best_prior_idx[j]] = j
+            best_true[best_prior_idx[j]] = 1.0
+
+        matches = true_box_tm[best_true_idx]
+        matches_mask = true_mask_tm[best_true_idx]
+
+        conf = labels[best_true_idx] + 1
+        conf[best_true <= 0.3] = 0
+        b1 = best_true>0.3
+        b2 = best_true<=0.5
+        conf[b1*b2] = -1
+
+        loc = encode(matches, pri, variances=[0.1, 0.2])
+        loc_t[s] = loc
+        conf_t[s] = conf
+        box_t[s] = matches
+        mask_t[s] = matches_mask
+
+    return loc_t,conf_t, mask_t, box_t
+
+
 
 def revert_image(scale,padding,image_size,box):
 

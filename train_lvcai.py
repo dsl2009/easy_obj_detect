@@ -15,12 +15,14 @@ from data_set import data_gen
 import json
 from dsl_data import data_loader_multi
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 def train():
     img = tf.placeholder(shape=[config.batch_size, config.image_size[0], config.image_size[1], 3], dtype=tf.float32)
     loc = tf.placeholder(shape=[config.batch_size, config.total_anchor_num, 4], dtype=tf.float32)
     conf = tf.placeholder(shape=[config.batch_size, config.total_anchor_num], dtype=tf.float32)
     pred_loc, pred_confs, vbs = get_box_logits(img,config)
+    print(pred_loc)
+    print(config.total_anchor_num)
     train_tensors = get_loss(conf, loc, pred_loc, pred_confs,config)
     gen_bdd = data_gen.get_batch(batch_size=config.batch_size,class_name='lvcai',image_size=config.image_size,max_detect=100)
     q = data_loader_multi.get_thread(gen=gen_bdd,thread_num=1)
@@ -73,7 +75,7 @@ def train():
 
 def get_right():
     d = []
-    dt = glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/test_round/step1/无瑕疵图片/*.jpg')
+    dt = glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/testb_round/step1/无瑕疵图片/*.jpg')
     for x in dt:
         d.append(x.split('/')[-1])
     return d
@@ -92,8 +94,8 @@ def detect():
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_nn_05/model.ckpt-161805')
-        images_path = sorted(glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/r2testb/*.jpg'))
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_last/model.ckpt-16124')
+        images_path = sorted(glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/guangdong_round2_test_b_20181106/*.jpg'))
         for ip in images_path:
             name = ip.split('/')[-1]
             print(name)
@@ -109,7 +111,7 @@ def detect():
             cls = []
             scores = []
             for s in range(len(p)):
-                if sc[s]>=0.4:
+                if sc[s]>=0.3:
                     bxx.append(bx[s])
                     cls.append(p[s])
                     scores.append(sc[s])
@@ -136,7 +138,7 @@ def detect():
                 'filename':name,
                 'rects':rects
             })
-        with open('pred_res101.json','w') as f:
+        with open('pred_last_13.json','w') as f:
             data = {'results':total_bxx}
             f.write(json.dumps(data))
             f.flush()

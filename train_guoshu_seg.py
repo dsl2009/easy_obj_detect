@@ -16,7 +16,7 @@ import json
 from dsl_data import data_loader_multi
 import os
 from matplotlib import pyplot as plt
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 def train():
     img = tf.placeholder(shape=[config.batch_size, config.image_size[0], config.image_size[1], 3], dtype=tf.float32)
     mask = tf.placeholder(shape=[config.batch_size, config.image_size[0], config.image_size[1], 1], dtype=tf.float32)
@@ -48,13 +48,14 @@ def train():
     for s in slim.get_variables():
         if 'resnet_v2_50' in s.name and 'Momentum' not in s.name and 'GroupNorm' not in s.name:
             vbs.append(s)
-    saver = tf.train.Saver(vbs)
+
 
     def restore(sess):
+        saver = tf.train.Saver(vbs)
         saver.restore(sess, config.check_dir)
 
 
-    sv = tf.train.Supervisor(logdir=config.save_dir, summary_op=None, init_fn=restore)
+    sv = tf.train.Supervisor(logdir=config.save_dir, summary_op=None, init_fn=None)
 
     with sv.managed_session() as sess:
         for step in range(1000000):
@@ -72,9 +73,9 @@ def train():
             if step % 10 == 0:
                 print('step:' + str(step) +
                       ' ' + 'class_loss:' + str(ls[0]) +
-                      ' ' + 'loc_loss:' + str(ls[1])
-                      #' ' + 'mask_loss:' + str(ls[2])+
-                      #' ' + 'dice_loss:' + str(ls[3])
+                      ' ' + 'loc_loss:' + str(ls[1])+
+                      ' ' + 'mask_loss:' + str(ls[2])+
+                      ' ' + 'dice_loss:' + str(ls[3])
                       )
                 summaries = sess.run(sum_op, feed_dict=feed_dict)
                 sv.summary_computed(sess, summaries)
@@ -82,7 +83,7 @@ def train():
 
 def detect():
     config.batch_size = 1
-    config.image_size = [512, 512]
+    config.image_size = [256, 256]
     imgs = tf.placeholder(shape=(1, config.image_size[0], config.image_size[1], 3), dtype=tf.float32,name='input_tensor')
     tf.add_to_collection('input_image',imgs)
 
@@ -96,12 +97,12 @@ def detect():
     saver = tf.train.Saver()
     total_bxx = []
 
-    builder = tf.saved_model.builder.SavedModelBuilder('server/export')
+    #builder = tf.saved_model.builder.SavedModelBuilder('server/export1')
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/guoshu_mask_dice1/model.ckpt-43628')
-        builder.add_meta_graph_and_variables(sess, ['tag_string'])
-        builder.save()
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/guoshu_mask_dice_coor256/model.ckpt-6397')
+        #builder.add_meta_graph_and_variables(sess, ['tag_string'])
+        #builder.save()
         images_path = sorted(glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/AIChallenger2018/zuixin/be224/180f5da4-b570-4df3-8e1c-db221983039a/*.png'))
         for ip in images_path:
             name = ip.split('/')[-1]

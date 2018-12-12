@@ -8,14 +8,14 @@ from utils import np_utils
 from skimage import io
 import glob
 
-ll = {'defect0':0.6,'defect1':0.4,'defect2':0.7,'defect3':0.7,'defect4':0.7,'defect5':0.7,
-      'defect6':0.7,'defect7':0.6,'defect8':0.7,'defect9':0.4}
+ll = {'defect0':0.6,'defect1':0.3,'defect2':0.7,'defect3':0.7,'defect4':0.7,'defect5':0.7,
+      'defect6':0.7,'defect7':0.6,'defect8':0.7,'defect9':0.3}
 
 
 
 def dsl_nms(box, sc, lb_name):
     over_lbs = np_utils.over_laps(box,box)
-    zuobiao = np.where(over_lbs>0.01)
+    zuobiao = np.where(over_lbs>0.1)
     lbs = np.zeros(shape=(len(sc),))
     sc = np.asarray(sc)
     ix = np.argmax(sc)
@@ -30,11 +30,49 @@ def dsl_nms(box, sc, lb_name):
                 lbs[y[i]] = -1
     lbs[ix] = 0
     the = ll[lb_name]
-    lbs[np.where(sc<the)]=-1
+    lbs[np.where(sc<0.3)]=-1
     return np.where(lbs==0)[0]
 
 
+def nms_cpu(boxes,score,  overlap):
+    if False:
+        pick = []
+    else:
+        trial = np.zeros((len(boxes), 4), dtype=np.float64)
+        trial[:] = boxes[:]
+        x1 = trial[:, 0]
+        y1 = trial[:, 1]
+        x2 = trial[:, 2]
+        y2 = trial[:, 3]
+        area = (x2 - x1 + 1) * (y2 - y1 + 1)
 
+        # vals = sort(score)
+        I = np.argsort(score)
+        pick = []
+        count = 1
+        while (I.size != 0):
+            # print "Iteration:",count
+            last = I.size
+            i = I[last - 1]
+            pick.append(i)
+            suppress = [last - 1]
+            for pos in range(last - 1):
+                j = I[pos]
+                xx1 = max(x1[i], x1[j])
+                yy1 = max(y1[i], y1[j])
+                xx2 = min(x2[i], x2[j])
+                yy2 = min(y2[i], y2[j])
+                w = xx2 - xx1 + 1
+                h = yy2 - yy1 + 1
+                if (w > 0 and h > 0):
+                    o = w * h / area[j]
+                    print
+                    "Overlap is", o
+                    if (o > overlap):
+                        suppress.append(pos)
+            I = np.delete(I, suppress)
+            count = count + 1
+    return pick
 
 
 def filter_nms(lbs):
@@ -64,12 +102,12 @@ def filter_nms(lbs):
 
 def get_right():
     d = []
-    dt = glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/r2testb/*.jpg')
+    dt = glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/guangdong_round2_test_b_20181106/*.jpg')
     for x in dt:
         d.append(x.split('/')[-1])
     return d
 def combin_json():
-    file_pths = ['../pred.json', '../pred_res50.json']
+    file_pths = ['../pred_last.json', '../pred_last_11.json', '../pred_last_13.json']
     total_result = []
     for f in file_pths:
         nn = dict()
@@ -120,9 +158,11 @@ def combine_result():
         f.flush()
 
 def show_result():
-    rt = '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/r2testb/'
-    data = json.loads(open('./new_pred.json').read())
+    rt = '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/guangdong_round2_test_b_20181106/'
+    data = json.loads(open('./final.json').read())
+
     reuslt = data['results']
+    print(len(reuslt))
     new_result = []
     for x in reuslt:
         labels = dict()
@@ -142,5 +182,47 @@ def show_result():
         print(file_name)
         ig = io.imread(os.path.join(rt, file_name))
         visual.display_instances_title(ig, boxes, class_ids=None, class_names=None, captions=captions)
-#combine_result()
+
 show_result()
+def combine_new():
+    rt = '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/guangdong_round2_test_b_20181106/'
+    x = combin_json()
+    total_bxx = []
+    for rect in x:
+        boxes = []
+        scores = []
+        labels = []
+        for b in rect['rects']:
+
+            boxes.append([b['xmin'],b['ymin'],b['xmax'],b['ymax']])
+            scores.append(b['confidence'])
+            labels.append(b['label'])
+        boxes, scores = np.asarray(boxes), np.asarray(scores)
+        if boxes.shape[0]>0:
+            keep = nms_cpu(boxes, scores, 0.1)
+            boxes = boxes[keep]
+            scores = scores[keep]
+            labels = np.asarray(labels)[keep]
+
+        rectts = []
+        for  b in range(boxes.shape[0]):
+            dd = {
+                'xmin':int(boxes[b][0]),
+                'xmax':int(boxes[b][2]),
+                'ymin':int(boxes[b][1]),
+                'ymax':int(boxes[b][3]),
+                'confidence':float(scores[b]),
+                'label': labels[b]
+                }
+            rectts.append(dd)
+
+        total_bxx.append({
+                'filename':rect['filename'],
+                'rects':rectts
+        })
+    with open('final.json','w') as f:
+        data = {'results':total_bxx}
+        f.write(json.dumps(data))
+        f.flush()
+
+

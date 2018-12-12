@@ -1,4 +1,5 @@
 import numpy as np
+import config
 def generate_anchors(scales, ratios, shape, feature_stride, anchor_stride=1):
     """
     scales: 1D array of anchor sizes in pixels. Example: [32, 64, 128]
@@ -83,13 +84,11 @@ def gen_ssd_anchors(image_size):
 
 
 def gen_ssd_anchors_new(image_size):
-    size = [16, 32, 64]
-    feature_stride = [8, 16, 32, 64]
-    ratios = [[0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2]]
+    size = config.anchors_size
+    feature_stride = config.feature_stride
+    ratios = [[0.5, 1, 2]]*len(feature_stride)
     scals = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
     sc = [[s * scals[0], s * scals[1], s * scals[2]] for s in size]
-
-    sc.append([128, 196, 256, 384, 512])
     shape = [(image_size[0] / x, image_size[1] / x) for x in feature_stride]
     anchors = gen_multi_anchors(scales=sc, ratios=ratios, shape=shape, feature_stride=feature_stride)
     anchors = anchors / np.asarray(
@@ -104,11 +103,11 @@ def gen_ssd_anchors_lvcai(image_size):
         size = [16, 32, 64, 128, 256, 512]
         #size = [24, 48, 96, 192, 384, 600]
         feature_stride = [8, 16, 32, 64, 128, 256]
-        ratios = [[0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2], [0.5, 1, 2]]
+        ratios = [[0.5, 1, 2]]*len(feature_stride)
     else:
         size = [24*r, 48*r, 96*r, 192*r, 384*r]
         feature_stride = [8, 16, 32, 64, 128]
-        ratios = [[0.5, 1, 2, 8, 16, 32], [0.5, 1, 2, 8, 16, 32], [0.5, 1, 2, 8, 16, 32], [0.5, 1, 2, 8, 16, 32], [0.5, 1, 2, 8, 16, 32]]
+        ratios = [[0.5, 1, 2, 8, 16, 32], [ 0.5, 1, 2, 8, 16, 32], [0.5, 1, 2, 8, 16, 32], [0.5, 1, 2, 8, 16, 32], [0.5, 1, 2, 8, 16, 32]]
 
     scals = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
     sc = [(s * scals[0], s * scals[1], s * scals[2]) for s in size]
@@ -131,4 +130,3 @@ def gen_anchors_light_head(image_size):
     out = np.clip(anchors, a_min=0.0, a_max=1.0)
 
     return out
-print(gen_anchors_light_head([896,1024]).shape)

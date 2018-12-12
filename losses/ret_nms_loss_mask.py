@@ -18,21 +18,38 @@ def soft_focal_loss(logits,labels,number_cls=20):
     labels = tf.one_hot(labels,number_cls)
     loss = tf.reduce_sum(labels*(-(1 - tf.nn.softmax(logits))**1*tf.log(tf.nn.softmax(logits))),axis=1)
     return loss
-def dice_coe(output, target, loss_type='jaccard', axis=(1, 2, 3), smooth=1e-5):
-    inse = tf.reduce_sum(output * target, axis=axis)
-    if loss_type == 'jaccard':
-        l = tf.reduce_sum(output * output, axis=axis)
-        r = tf.reduce_sum(target * target, axis=axis)
-    elif loss_type == 'sorensen':
-        l = tf.reduce_sum(output, axis=axis)
-        r = tf.reduce_sum(target, axis=axis)
-    else:
-        raise Exception("Unknow loss_type")
-    dice = (2. * inse + smooth) / (l + r + smooth)
-    dice = tf.reduce_mean(dice)
-    return dice
 
-def get_loss(conf_t,loc_t,pred_loc, pred_confs,cfg, out_put, mask):
+
+def sigmoid_cross_entropy_balanced(logits, labels, name='cross_entropy_loss'):
+    """
+    Implements Equation [2] in https://arxiv.org/pdf/1504.06375.pdf
+    Compute edge pixels for each training sample and set as pos_weights to
+    tf.nn.weighted_cross_entropy_with_logits
+    """
+
+    y = tf.cast(labels, tf.float32)
+    logits = tf.cast(logits, tf.float32)
+
+    count_neg = tf.reduce_sum(1. - y)
+    count_pos = tf.reduce_sum(y)
+
+    # Equation [2]
+    beta = count_neg / (count_neg + count_pos)
+
+    # Equation [2] divide by 1 - beta
+    pos_weight = beta / (1 - beta)
+
+    cost = tf.nn.weighted_cross_entropy_with_logits(logits=logits, targets=y, pos_weight=pos_weight)
+
+    # Multiply by 1 - beta
+    cost = tf.reduce_mean(cost * (1 - beta))
+
+    # check if image has no edge pixels return 0 else return complete error function
+    return tf.where(tf.equal(count_pos, 0.0), 0.0, cost, name=name)
+
+
+
+def get_box_loss(conf_t,loc_t,pred_loc, pred_confs,cfg):
 
     anc = np_utils.pt_from_nms(config.anchor_gen(config.image_size))
     anchors = tf.constant(anc,dtype=tf.float32)
@@ -129,23 +146,53 @@ def get_loss(conf_t,loc_t,pred_loc, pred_confs,cfg, out_put, mask):
                                            tf.constant(0.0))
     final_loss_c = final_loss_c
 
-    mask_loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=mask, logits=out_put)
-    mask_loss = tf.reduce_mean(mask_loss)*10
 
-    dice_loss = (1-dice_coe(output=tf.nn.sigmoid(out_put), target=mask))*10
+
+    return final_loss_l, final_loss_c
+
+
+
+def mrcnn_mask_loss(target_masks, pred_masks, target_class):
+
+    pred_masks = tf.transpose(pred_masks, [0, 3, 1, 2])
+
+    target_class = tf.cast(target_class, tf.int32)
+    ix = tf.concat([tf.reshape(tf.range(tf.shape(pred_masks)[0]), [-1, 1]), tf.reshape(target_class, [-1, 1])], axis=1)
+
+    pred_masks = tf.gather_nd(pred_masks, ix)
+    ik = tf.where(tf.greater(tf.reduce_sum(target_masks,axis=[1,2]),0))
+    pred_masks = tf.squeeze(tf.gather(pred_masks, ik),1)
+    target_masks = tf.squeeze(tf.gather(target_masks, ik),1)
+
+    target_masks = tf.cast(target_masks, tf.float32)
+    tf.summary.image('target_mask', tf.expand_dims(target_masks, -1))
+    tf.summary.image('pred_masks', tf.expand_dims(tf.sigmoid(pred_masks), -1))
+
+    loss = tf.keras.backend.switch(tf.cast(tf.size(target_masks) > 0, tf.bool),
+                                   tf.nn.sigmoid_cross_entropy_with_logits(labels=target_masks, logits=pred_masks),
+                                   tf.constant(0.0))
+    loss = tf.reduce_mean(loss)*100
+    '''
+    loss = sigmoid_cross_entropy_balanced(pred_masks,labels=target_masks)
+    '''
+    return loss
+
+
+def get_loss(conf_t,loc_t,pred_loc, pred_confs,cfg, target_masks, pred_masks, target_class):
+    final_loss_l, final_loss_c = get_box_loss(conf_t,loc_t,pred_loc, pred_confs,cfg)
+    target_masks = tf.reshape(target_masks, shape=(-1, config.mask_pool_shape[0],config.mask_pool_shape[0]))
+    mask_loss = mrcnn_mask_loss(target_masks, pred_masks, target_class)
 
 
     tf.losses.add_loss(final_loss_c)
     tf.losses.add_loss(final_loss_l)
     tf.losses.add_loss(mask_loss)
-    tf.losses.add_loss(dice_loss)
-    total_loss = tf.losses.get_losses()
 
-    tf.summary.scalar(name='class_loss',tensor=final_loss_c)
+    total_loss = tf.losses.get_losses()
+    tf.summary.scalar(name='class_loss', tensor=final_loss_c)
     tf.summary.scalar(name='loc_loss', tensor=final_loss_l)
     tf.summary.scalar(name='mask_loss', tensor=mask_loss)
-    tf.summary.scalar(name='dice_loss', tensor=dice_loss)
-    train_tensors = tf.identity(total_loss, 'ss')
 
+    train_tensors = tf.identity(total_loss, 'ss')
 
     return train_tensors

@@ -16,7 +16,7 @@ import config
 from dsl_data import data_loader_multi
 from models import light_head
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 def train():
     pl_images = tf.placeholder(shape=[config.batch_size, config.image_size[0], config.image_size[1], 3], dtype=tf.float32)
     pl_gt_boxs = tf.placeholder(shape=[config.batch_size, 100, 4], dtype=tf.float32)
@@ -105,7 +105,7 @@ def detect():
     saver = tf.train.Saver()
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_light_head_05/model.ckpt-8526')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_light_head_05/model.ckpt-61584')
         for ip in glob.glob(
                 '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/r2testb/*.jpg'):
             print(ip)
@@ -121,8 +121,7 @@ def detect():
             t = time.time()
             detects,p = sess.run([detections,pp], feed_dict={ig: img, wind: window})
             #arr = detects[0]
-            print(detects)
-            print(p)
+
             print(np.argmax(p,axis=1))
             print(np.max(p,axis=1))
             ix = np.where(np.sum(detects, axis=1) > 0)
@@ -145,7 +144,7 @@ def detect1():
     saver = tf.train.Saver()
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_light_head_05/model.ckpt-8526')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_light_head_05/model.ckpt-61584')
         for ip in glob.glob(
                 '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/r2testb/*.jpg'):
             print(ip)
