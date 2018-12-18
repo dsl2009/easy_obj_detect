@@ -58,7 +58,7 @@ server_coco_ann = '/data_set/data/annotations/instances_train2014.json'
 local_check = '/home/dsl/all_check/resnet_v2_50_2017_04_14/resnet_v2_50.ckpt'
 server_check = '/data_set/check/inception_v2.ckpt'
 
-local_save = '/home/dsl/all_check/obj_detect/guoshu_mask_dice_coor256'
+local_save = '/home/dsl/all_check/obj_detect/guoshu_light_head_align'
 server_save = '/data_set/check/voc_ssd_yolo'
 
 is_use_group_norm = False
@@ -72,11 +72,12 @@ else:
     #aspect_num = [18, 18, 18, 18, 18]
     #aspect_num = [24, 24, 24, 24, 24]
     anchors_size = [24, 48, 96, 192]
-    aspect_num = [9, 9, 9, 9]
+    aspect_num = [15, 9, 9, 9]
 
-anchor_gen = gen_ssd_anchors_new
+anchor_gen = gen_anchors_light_head
 
-total_anchor_num = sum([(image_size[0]/x)*(image_size[1]/x)*y for x,y in zip(feature_stride,aspect_num)])
+#total_anchor_num = sum([(image_size[0]/x)*(image_size[1]/x)*y for x,y in zip(feature_stride,aspect_num)])
+total_anchor_num = 3840
 if flag == 1:
     save_dir = local_save
     check_dir = local_check

@@ -24,11 +24,11 @@ def train():
     pl_input_rpn_match = tf.placeholder(shape=[config.batch_size, config.total_anchor_num], dtype=tf.int32)
     pl_input_rpn_bbox = tf.placeholder(shape=[config.batch_size, config.total_anchor_num, 4], dtype=tf.float32)
 
-    train_tensors, ta_gt, _ = light_head.get_train_tensor(pl_images,  pl_input_rpn_match,pl_input_rpn_bbox, pl_label,pl_gt_boxs)
+    train_tensors, ta_gt, ids = light_head.get_train_tensor(pl_images,  pl_input_rpn_match,pl_input_rpn_bbox, pl_label,pl_gt_boxs)
 
-    gen_bdd = data_gen.get_batch(batch_size=config.batch_size, class_name='lvcai', image_size=config.image_size,
+    gen_bdd = data_gen.get_batch(batch_size=config.batch_size, class_name='guoshu', image_size=config.image_size,
                                  max_detect=100,is_rcnn=True)
-    q = data_loader_multi.get_thread(gen_bdd,2)
+
     global_step = slim.get_or_create_global_step()
     lr = tf.train.exponential_decay(
         learning_rate=0.001,
@@ -44,7 +44,7 @@ def train():
     vbs = []
     for s in slim.get_variables():
         if 'resnet_v2_50' in s.name and 'Momentum' not in s.name and 'GroupNorm' not in s.name:
-            print(s.name)
+
             vbs.append(s)
     saver = tf.train.Saver(vbs)
 
@@ -59,7 +59,7 @@ def train():
         for step in range(20000000):
             print('       ' + ' '.join(['*'] * (step % 10)))
 
-            images, true_box, true_label = q.get()
+            images, true_box, true_label = next(gen_bdd)
 
 
             rpn_label, rpn_box = np_utils.build_rpn_targets_light_head(true_box, true_label, batch_size=config.batch_size,
@@ -82,8 +82,8 @@ def train():
             feed_dict = {pl_images: images, pl_gt_boxs: t1,
                          pl_label: true_label, pl_input_rpn_bbox: t2,
                          pl_input_rpn_match: rpn_label}
-            ls, step,tg = sess.run([train_op, global_step,ta_gt], feed_dict=feed_dict)
-
+            ls, step,tg, idx = sess.run([train_op, global_step,ta_gt,ids], feed_dict=feed_dict)
+            #print(idx)
             if step % 10 == 0:
                 print('step:' + str(step) +
                       ' ' + 'rpn_class_loss:' + str(tg[0]) +
@@ -105,9 +105,9 @@ def detect():
     saver = tf.train.Saver()
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_light_head_05/model.ckpt-61584')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/guoshu_light_head_align/model.ckpt-2521')
         for ip in glob.glob(
-                '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/r2testb/*.jpg'):
+                '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/xair/biao_zhu/tree/*/*.png'):
             print(ip)
             img = cv2.imread(ip)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -121,9 +121,8 @@ def detect():
             t = time.time()
             detects,p = sess.run([detections,pp], feed_dict={ig: img, wind: window})
             #arr = detects[0]
-
-            print(np.argmax(p,axis=1))
-            print(np.max(p,axis=1))
+            print(p)
+            print(detects)
             ix = np.where(np.sum(detects, axis=1) > 0)
 
             box = detects[ix]
@@ -131,9 +130,7 @@ def detect():
             label = box[:, 4]
             score = box[:, 5]
             label = np.asarray(label, np.int32)-1
-            print(boxes)
-            print(label)
-            visual.display_instances_title(org, np.asarray(boxes) * 896, class_ids=label,
+            visual.display_instances_title(org, np.asarray(boxes) * 256, class_ids=label,
                                            class_names=config.VOC_CLASSES, scores=score, is_faster=True)
 def detect1():
     config.batch_size = 1
@@ -144,9 +141,9 @@ def detect1():
     saver = tf.train.Saver()
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/lvcai_light_head_05/model.ckpt-61584')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/guoshu_ll/model.ckpt-37710')
         for ip in glob.glob(
-                '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/r2testb/*.jpg'):
+                '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/xair/biao_zhu/tree/*/*.png'):
             print(ip)
             img = cv2.imread(ip)
             imges = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -182,4 +179,4 @@ def tt():
 
 
 
-train()
+detect()

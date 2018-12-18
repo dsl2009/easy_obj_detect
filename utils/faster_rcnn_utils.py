@@ -443,7 +443,7 @@ def refine_detections_graph(rois, probs, deltas,window,cfg):
     """
     # Class IDs per ROI
 
-
+    print(rois, probs, deltas,window)
     rois = tf.squeeze(rois,axis=0)
     class_ids = tf.argmax(probs, axis=1, output_type=tf.int32)
     class_scores = tf.reduce_max(probs, axis=1)

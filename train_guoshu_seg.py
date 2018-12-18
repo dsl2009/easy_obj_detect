@@ -100,7 +100,7 @@ def detect():
     #builder = tf.saved_model.builder.SavedModelBuilder('server/export1')
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/guoshu_mask_dice_coor256/model.ckpt-6397')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/guoshu_mask_dice_coor256/model.ckpt-22219')
         #builder.add_meta_graph_and_variables(sess, ['tag_string'])
         #builder.save()
         images_path = sorted(glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/AIChallenger2018/zuixin/be224/180f5da4-b570-4df3-8e1c-db221983039a/*.png'))

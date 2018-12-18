@@ -21,5 +21,6 @@ hh = tf.convert_to_tensor(np.random.rand(1, 5, 5, 25*4), dtype=tf.float32)
 sess = tf.Session(config=tf.ConfigProto(log_device_placement=False))
 
 ny2, nch, nmax = sess.run([y2, channels, argmax_position])
+print(ny2)
 print(ny2.shape)
 print(ny2.shape)

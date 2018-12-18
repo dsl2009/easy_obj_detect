@@ -78,35 +78,46 @@ def rpn_bbox_loss_graph( input_rpn_deltas, input_rpn_label, pred_rpn_deltas):
 
 
 def mrcnn_class_loss_graph(target_class_ids, pred_class_logits, rois):
-    rois = tf.reshape(rois, shape=(-1,4))
-    sm = tf.reduce_sum(rois, axis=1)
-    idx = tf.where(sm>0)[:,0]
+    print(target_class_ids, pred_class_logits, rois)
+    #pred_bbox = tf.reshape(rois, shape=(-1, 4))
+    #ix = tf.where(tf.reduce_sum(tf.abs(pred_bbox),axis=1)>0)[:,0]
+
+    #target_class_ids = tf.gather(target_class_ids, ix)
+    #pred_class_logits = tf.gather(pred_class_logits,ix)
+
+
+    tf.summary.scalar('target_shape', tf.shape(target_class_ids)[0])
     target_class_ids = tf.reshape(target_class_ids, shape=(-1,))
     target_class_ids = tf.cast(target_class_ids, 'int64')
-    target_class_ids = tf.gather(target_class_ids, idx)
-    pred_class_logits = tf.gather(pred_class_logits, idx)
     pos_num = tf.reduce_sum(tf.cast(tf.greater(target_class_ids,0),tf.int32))
-    loss = soft_focal_loss(labels=target_class_ids, logits=pred_class_logits, number_cls=11)
+    tf.summary.scalar('pos_num', pos_num)
+    loss = soft_focal_loss(labels=target_class_ids, logits=pred_class_logits, number_cls=2)
+
     loss = tf.keras.backend.switch(tf.cast(tf.size(loss) > 0, tf.bool), tf.reduce_sum(loss)/tf.cast(pos_num,tf.float32), tf.constant(0.0))
 
     return loss
 
 
 def mrcnn_bbox_loss_graph(target_bbox, target_class_ids, pred_bbox):
-    pred_bbox = tf.reshape(pred_bbox,shape=(config.batch_size,-1, 4))
+
+    print(pred_bbox)
+    pred_bbox = tf.reshape(pred_bbox,(-1, 2, 4))
     target_class_ids = tf.reshape(target_class_ids, (-1,))
     target_bbox = tf.reshape(target_bbox, (-1, 4))
+    # pred_bbox = tf.reshape(pred_bbox, (-1, tf.shape(pred_bbox)[2], 4))
 
+
+    # Only positive ROIs contribute to the loss. And only
+    # the right class_id of each ROI. Get their indicies.
     positive_roi_ix = tf.where(target_class_ids > 0)[:, 0]
     positive_roi_class_ids = tf.cast(
         tf.gather(target_class_ids, positive_roi_ix), tf.int64)
-
     indices = tf.stack([positive_roi_ix, positive_roi_class_ids], axis=1)
 
     # Gather the deltas (predicted and true) that contribute to loss
     target_bbox = tf.gather(target_bbox, positive_roi_ix)
     pred_bbox = tf.gather_nd(pred_bbox, indices)
-
+    print(target_bbox,pred_bbox)
     loss = tf.keras.backend.switch(tf.cast(tf.size(target_bbox) > 0,tf.bool),
                     smooth_l1_loss(y_true=target_bbox, y_pred=pred_bbox),
                     tf.constant(0.0))

@@ -7,7 +7,7 @@ from dsl_data import xair_guoshu, mianhua, bdd, voc, Lucai,BigLand
 
 def get_batch(batch_size,class_name, is_shuff = True,max_detect = 50,image_size=300, is_rcnn = False):
     if class_name == 'guoshu':
-        data_set = xair_guoshu.Tree('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/xair/biao_zhu',
+        data_set = xair_guoshu.Tree('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/xair/biao_zhu/tree',
                                     config.image_size)
     elif class_name == 'mianhua':
         data_set = mianhua.MianHua('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/mianhua/open',

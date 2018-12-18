@@ -119,9 +119,9 @@ def gen_ssd_anchors_lvcai(image_size):
     return out
 
 def gen_anchors_light_head(image_size):
-    size = [32, 64,  128, 256, 512]
-    feature_stride = [32]
-    ratios = [[0.3, 0.5, 1, 2, 8, 16, 32, 48]]
+    size = [24,48, 64,96,128]
+    feature_stride = [16]
+    ratios = [[0.5, 1, 2]]
     sc = [size]
     shape = [(image_size[0] / x, image_size[1] / x) for x in feature_stride]
     anchors = gen_multi_anchors(scales=sc, ratios=ratios, shape=shape, feature_stride=feature_stride)

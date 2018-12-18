@@ -1,0 +1,9 @@
+anchor_scales = [2, 4, 8, 16, 32]
+anchor_ratios = [0.5, 1, 2]
+bn_training = False
+weight_decay = 0.0001
+stride = [16]
+train_batch_per_gpu = 4
+test_batch_per_gpu =1
+RPN_NORMALIZE_MEANS = (0.0, 0.0, 0.0, 0.0)
+RPN_NORMALIZE_STDS = (0.1, 0.1, 0.2, 0.2)

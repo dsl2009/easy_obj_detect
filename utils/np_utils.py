@@ -291,10 +291,10 @@ def build_rpn_targets_light_head(true_box, true_label,batch_size = 4,cfg = None)
 
         matches = true_box_tm[best_true_idx]
         conf = labels[best_true_idx] + 1
-        conf[best_true>0.5] = 1
+        conf[best_true>0.7] = 1
         conf[best_true <= 0.3] = 0
         b1 = best_true > 0.3
-        b2 = best_true <= 0.5
+        b2 = best_true <= 0.7
         conf[b1 * b2] = -1
         cho = np.where(conf==0)[0]
         np.random.shuffle(cho)
