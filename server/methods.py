@@ -25,16 +25,10 @@ def get_xy(dr):
     x_min, x_max, y_min, y_max = min(x), max(x), min(y), max(y)
     return x_min, x_max, y_min, y_max
 
-def hebing_image():
-    dataes = dataes = {'data': {'task_id': '1ed4ce8a-fb02-499f-9284-90408c961ef8',
-                                'task_dr': '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/AIChallenger2018/zuixin/be224/180f5da4-b570-4df3-8e1c-db221983039a',
-                                'scope': {"x_min": 1710742, "z": 21, "y_min": 909283, "x_max": 1710768,
-                                          "y_max": 909302}},
-                       'status': 200}
-    d = dataes['data']
-    result_dr = d['task_dr']
-    x_min, x_max, y_min, y_max = get_xy(result_dr)
+def hebing_image(result_dr, sv_image):
 
+    x_min, x_max, y_min, y_max = get_xy(result_dr)
+    print(x_min, x_max, y_min, y_max)
     w = (x_max-x_min+1)*256
     h = (y_max-y_min+1)*256
     print(h,w)
@@ -50,9 +44,8 @@ def hebing_image():
         start_y = c_y - y_min
         print(start_y*256+256)
         ig[start_y*256:start_y*256+256, start_x*256:start_x*256+256,:] = img[:,:, 0:3]
-    cv2.imwrite( 'ss.jpg',ig)
-    plt.imshow(ig)
-    plt.show()
+    cv2.imwrite(sv_image,ig)
+
 
 def non_max(data, w, h, sess):
 
@@ -63,7 +56,7 @@ def non_max(data, w, h, sess):
     sel = tf.image.non_max_suppression(
         boxes=box_tensor,
         scores=score_tensor,
-        iou_threshold=0.1,
+        iou_threshold=0.3,
         score_threshold=0.5,
         max_output_size=data.shape[0]
     )
@@ -72,6 +65,7 @@ def non_max(data, w, h, sess):
     return box
 
 def convert_circle(data):
+    print(data)
     r = (data[:,2] - data[:,0])/2
     x = (data[:,2]+data[:,0])/2
     y = (data[:, 3] + data[:, 1]) / 2
@@ -112,21 +106,34 @@ def post_result(boundary,task_id):
 def update_task():
     tasks = os.listdir('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/xair/biao_zhu/tree/')
     url = 'http://101.37.205.76:8000/app/add_ai_version'
-    data = {'type':'tree', 'version':'0.03', 'tasks':json.dumps(tasks)}
+    data = {'type':'tree', 'version':'0.05', 'tasks':json.dumps(tasks)}
     r = requests.get(url, params=data)
     try:
         print(r.text)
     except:
         pass
 
+def filter_box(box):
+    mj = (box[:, 3] - box[:, 1]) / (box[:, 2] - box[:, 0])
+    mk = np.where(mj > 0.6)
+    box = box[mk]
+
+
+    mj = (box[:, 3] - box[:, 1]) / (box[:, 2] - box[:, 0])
+    mk = np.where(mj < 1.6)
+    box = box[mk]
+    return box
+
+
 
 
 def convert_result(dt, task_id, w, h, sess):
-    fin = non_max(dt, w, h, sess)
-    x, y, r = convert_circle(fin)
+    #fin = non_max(dt, w, h, sess)
+    box = filter_box(dt)
+    x, y, r = convert_circle(box)
+    print(x,y,r)
     draw_circle(x,y,r)
     boundry = []
     for x1, y1, r1 in zip(x, y, r):
         boundry.append({'dot':{'pix_x':int(x1), 'pix_y':int(y1)},'radius':int(r1)})
     #post_result(json.dumps(boundry), task_id=task_id)
-update_task()

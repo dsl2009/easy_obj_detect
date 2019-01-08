@@ -28,12 +28,12 @@ def train():
 
     gen_bdd = data_gen.get_batch(batch_size=config.batch_size, class_name='guoshu', image_size=config.image_size,
                                  max_detect=100,is_rcnn=True)
-
+    q = data_loader_multi.get_thread(gen_bdd,thread_num=2)
     global_step = slim.get_or_create_global_step()
     lr = tf.train.exponential_decay(
         learning_rate=0.001,
         global_step=global_step,
-        decay_steps=400000,
+        decay_steps=5000,
         decay_rate=0.9,
         staircase=True)
 
@@ -59,7 +59,7 @@ def train():
         for step in range(20000000):
             print('       ' + ' '.join(['*'] * (step % 10)))
 
-            images, true_box, true_label = next(gen_bdd)
+            images, true_box, true_label = q.get()
 
 
             rpn_label, rpn_box = np_utils.build_rpn_targets_light_head(true_box, true_label, batch_size=config.batch_size,
@@ -105,9 +105,9 @@ def detect():
     saver = tf.train.Saver()
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/guoshu_light_head_align/model.ckpt-2521')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/guoshu_ff/model.ckpt-17254')
         for ip in glob.glob(
-                '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/xair/biao_zhu/tree/*/*.png'):
+                '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/xair/biao_zhu/tree/f9f40b6e-81c8-432e-805a-ed394fe3d179/*.png'):
             print(ip)
             img = cv2.imread(ip)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -143,7 +143,7 @@ def detect1():
         sess.run(tf.global_variables_initializer())
         saver.restore(sess, '/home/dsl/all_check/obj_detect/guoshu_ll/model.ckpt-37710')
         for ip in glob.glob(
-                '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/xair/biao_zhu/tree/*/*.png'):
+                '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/xair/180f5da4-b570-4df3-8e1c-db221983039a/*.png'):
             print(ip)
             img = cv2.imread(ip)
             imges = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -172,10 +172,10 @@ def tt():
         print('       ' + ' '.join(['*'] * (step % 10)))
 
         images, true_box, true_label = next(gen_bdd)
-        print(np.where(true_label>0))
-        rpn_label, rpn_box = np_utils.build_rpn_targets(true_box, true_label, batch_size=config.batch_size,
-                                                        cfg=config.Config)
-        print(np.where(rpn_label==1))
+        #print(np.where(true_label>0))
+        #rpn_label, rpn_box = np_utils.build_rpn_targets(true_box, true_label, batch_size=config.batch_size,
+                                                        #cfg=config.Config)
+        #print(np.where(rpn_label==1))
 
 
 

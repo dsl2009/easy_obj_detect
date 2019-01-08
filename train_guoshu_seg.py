@@ -16,7 +16,7 @@ import json
 from dsl_data import data_loader_multi
 import os
 from matplotlib import pyplot as plt
-os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 def train():
     img = tf.placeholder(shape=[config.batch_size, config.image_size[0], config.image_size[1], 3], dtype=tf.float32)
     mask = tf.placeholder(shape=[config.batch_size, config.image_size[0], config.image_size[1], 1], dtype=tf.float32)
@@ -29,10 +29,10 @@ def train():
     q = data_loader_multi.get_thread(gen=gen_bdd,thread_num=2)
     global_step = slim.get_or_create_global_step()
     lr = tf.train.exponential_decay(
-        learning_rate=0.001,
+        learning_rate=0.01,
         global_step=global_step,
-        decay_steps=10000,
-        decay_rate=0.7,
+        decay_steps=5000,
+        decay_rate=0.9,
         staircase=True)
 
     ig = img+ tf.constant(value=np.asarray([123.15, 115.90, 103.06])/255.0,dtype=tf.float32)
@@ -83,7 +83,7 @@ def train():
 
 def detect():
     config.batch_size = 1
-    config.image_size = [256, 256]
+    config.image_size = [2048, 2048]
     imgs = tf.placeholder(shape=(1, config.image_size[0], config.image_size[1], 3), dtype=tf.float32,name='input_tensor')
     tf.add_to_collection('input_image',imgs)
 
@@ -97,13 +97,13 @@ def detect():
     saver = tf.train.Saver()
     total_bxx = []
 
-    #builder = tf.saved_model.builder.SavedModelBuilder('server/export1')
+    #builder = tf.saved_model.builder.SavedModelBuilder('server/export')
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, '/home/dsl/all_check/obj_detect/guoshu_mask_dice_coor256/model.ckpt-22219')
+        saver.restore(sess, '/home/dsl/all_check/obj_detect/guo_28/model.ckpt-213644')
         #builder.add_meta_graph_and_variables(sess, ['tag_string'])
         #builder.save()
-        images_path = sorted(glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/AIChallenger2018/zuixin/be224/180f5da4-b570-4df3-8e1c-db221983039a/*.png'))
+        images_path = sorted(glob.glob('/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/xair/big/*.jpg'))
         for ip in images_path:
             name = ip.split('/')[-1]
             print(name)
@@ -119,7 +119,7 @@ def detect():
             cls = []
             scores = []
             for s in range(len(p)):
-                if sc[s]>=0.5:
+                if sc[s]>=0.4:
                     bxx.append(bx[s])
                     cls.append(p[s])
                     scores.append(sc[s])

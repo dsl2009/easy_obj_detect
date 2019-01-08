@@ -29,9 +29,9 @@ def train():
     q = data_loader_multi.get_thread(gen=gen_bdd,thread_num=2)
     global_step = slim.get_or_create_global_step()
     lr = tf.train.exponential_decay(
-        learning_rate=0.001,
+        learning_rate=0.01,
         global_step=global_step,
-        decay_steps=10000,
+        decay_steps=5000,
         decay_rate=0.7,
         staircase=True)
 
@@ -54,7 +54,7 @@ def train():
         saver.restore(sess, config.check_dir)
 
 
-    sv = tf.train.Supervisor(logdir=config.save_dir, summary_op=None, init_fn=restore)
+    sv = tf.train.Supervisor(logdir=config.save_dir, summary_op=None, init_fn=None)
 
     with sv.managed_session() as sess:
         for step in range(1000000):
@@ -149,4 +149,4 @@ def detect():
             f.write(json.dumps(data))
             f.flush()
 
-detect()
+train()

@@ -102,11 +102,11 @@ def get_loc_conf_new(true_box, true_label,batch_size = 4,cfg = None):
         best_prior_idx = np.argmax(ops, axis=1)
         for j in range(best_prior_idx.shape[0]):
             best_true_idx[best_prior_idx[j]] = j
-            best_true[best_prior_idx[j]] = 1.0
+            #best_true[best_prior_idx[j]] = 1.0
         matches = true_box_tm[best_true_idx]
         conf = labels[best_true_idx] + 1
-        conf[best_true <= 0.3] = 0
-        b1 = best_true>0.3
+        conf[best_true <= 0.4] = 0
+        b1 = best_true>0.4
         b2 = best_true<=0.5
         conf[b1*b2] = -1
         loc = encode(matches, pri, variances=[0.1, 0.2])
@@ -147,8 +147,8 @@ def get_loc_conf_mask_box(true_box, true_mask, true_label,batch_size = 4,cfg = N
         matches_mask = true_mask_tm[best_true_idx]
 
         conf = labels[best_true_idx] + 1
-        conf[best_true <= 0.3] = 0
-        b1 = best_true>0.3
+        conf[best_true <= 0.5] = 0
+        b1 = best_true>0.4
         b2 = best_true<=0.5
         conf[b1*b2] = -1
 
@@ -291,10 +291,10 @@ def build_rpn_targets_light_head(true_box, true_label,batch_size = 4,cfg = None)
 
         matches = true_box_tm[best_true_idx]
         conf = labels[best_true_idx] + 1
-        conf[best_true>0.7] = 1
+        conf[best_true>config.rcnn_nms_the] = 1
         conf[best_true <= 0.3] = 0
         b1 = best_true > 0.3
-        b2 = best_true <= 0.7
+        b2 = best_true <= config.rcnn_nms_the
         conf[b1 * b2] = -1
         cho = np.where(conf==0)[0]
         np.random.shuffle(cho)

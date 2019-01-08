@@ -34,6 +34,8 @@ COCO_CLASSES = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'tr
 BDD = ['bike', 'bus', 'car', 'motor', 'person', 'rider','traffic light', 'traffic sign', 'train', 'truck']
 Lvcai = ['defect0','defect1','defect2','defect3','defect4','defect5','defect6','defect7','defect8','defect9']
 
+rcnn_nms_the = 0.6
+
 Tree = ['tree']
 MAX_GT = 100
 batch_size = 8
@@ -58,7 +60,7 @@ server_coco_ann = '/data_set/data/annotations/instances_train2014.json'
 local_check = '/home/dsl/all_check/resnet_v2_50_2017_04_14/resnet_v2_50.ckpt'
 server_check = '/data_set/check/inception_v2.ckpt'
 
-local_save = '/home/dsl/all_check/obj_detect/guoshu_light_head_align'
+local_save = '/home/dsl/all_check/obj_detect/guo_focal_new_coor_aug3'
 server_save = '/data_set/check/voc_ssd_yolo'
 
 is_use_group_norm = False
@@ -68,16 +70,19 @@ if not is_use_last:
     aspect_num = [9,9,9,9,9]
     anchors_size = [16, 32, 64, 128, 256]
 else:
-    feature_stride = [4, 8, 16, 32]
+    feature_stride = [8, 16, 32, 64]
+    #feature_stride = [8, 16, 32, 64]
     #aspect_num = [18, 18, 18, 18, 18]
     #aspect_num = [24, 24, 24, 24, 24]
-    anchors_size = [24, 48, 96, 192]
-    aspect_num = [15, 9, 9, 9]
+    #anchors_size = [16, 32, 64, 128]
+    #anchors_size = [[14, 18, 24],[30, 36, 42],[48, 54, 64]]
+    anchors_size = [[16, 22, 28], [32, 42, 54], [64, 84, 104], [128, 156, 192]]
+    aspect_num = [9, 9, 9,9]
 
-anchor_gen = gen_anchors_light_head
+anchor_gen = gen_ssd_anchors_new
 
-#total_anchor_num = sum([(image_size[0]/x)*(image_size[1]/x)*y for x,y in zip(feature_stride,aspect_num)])
-total_anchor_num = 3840
+total_anchor_num = sum([(image_size[0]/x)*(image_size[1]/x)*y for x,y in zip(feature_stride,aspect_num)])
+#total_anchor_num = 3072
 if flag == 1:
     save_dir = local_save
     check_dir = local_check

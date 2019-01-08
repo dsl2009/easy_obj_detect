@@ -74,13 +74,13 @@ def get_bound_circle(box,url,ids):
 
 
 def detect(qq):
-    image_size = [512,512]
-    os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+    image_size = [256,256]
+    os.environ["CUDA_VISIBLE_DEVICES"] = '1'
     sess_config = tf.ConfigProto()
     sess_config.gpu_options.per_process_gpu_memory_fraction = 0.2
     sess_config.gpu_options.allow_growth = True
     with tf.Session(config=sess_config) as sess:
-        meta_graph_def = tf.saved_model.loader.load(sess, ['tag_string'], 'export1')
+        meta_graph_def = tf.saved_model.loader.load(sess, ['tag_string'], 'export')
         imgs = sess.graph.get_tensor_by_name('input_tensor:0')
         boxes = sess.graph.get_tensor_by_name('boxes:0')
         score = sess.graph.get_tensor_by_name('score:0')
@@ -110,7 +110,7 @@ def detect(qq):
                     zeros_point.append([x[1], x[0]])
 
                 # img = (org/ 255.0-0.5)*2
-                img = org - [123.15, 115.90, 103.06]
+                img = (org - [123.15, 115.90, 103.06])/255.0
                 img = np.expand_dims(img, axis=0)
                 t = time.time()
                 bx, sc, p = sess.run([boxes, score, pred], feed_dict={imgs: img})
@@ -157,7 +157,7 @@ def start():
     last_task_id = ''
     while True:
         dataes = dataes = {'data': {'task_id': '1ed4ce8a-fb02-499f-9284-90408c961ef8',
-                       'task_dr': '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/AIChallenger2018/zuixin/be224/180f5da4-b570-4df3-8e1c-db221983039a',
+                       'task_dr': '/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/xair/a733758b-6b57-4923-8a69-42e36cfb5fd0',
                        'scope': {"x_min": 1710742, "z": 21, "y_min": 909283, "x_max": 1710768, "y_max": 909302}},
               'status': 200}
         if dataes['status'] == 200:

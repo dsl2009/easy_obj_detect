@@ -64,7 +64,7 @@ def conv_block(input_tensor, in_depth,  rate,stride=2):
 def resnet(inputs):
     #inputs = tf.pad(inputs,[[0, 0], [1, 1], [1, 1], [0, 0]])
     conv1 = coor.conv2d(inputs, 64, 7, stride=2, padding='VALID', scope='conv7')
-
+    conv1 = coor.conv2d(conv1, 64, 3, stride=2, padding='SAME', scope='conv1')
 
     # Stage 2
     conv2 = conv_block(conv1, 64, rate=1, stride=2)
@@ -82,7 +82,7 @@ def resnet(inputs):
     return conv2, conv3, conv4, conv5
 
 
-def fpn(inputs):
+def fpn_mask(inputs):
     with slim.arg_scope(second_arg_bn()):
         c1, c2, c3, c4 = resnet(inputs)
     print(c1, c2, c3, c4)
@@ -122,34 +122,82 @@ def fpn(inputs):
             c4 = slim.conv2d(c3, num_outputs=128, kernel_size=3, stride=2)
     '''
     with slim.arg_scope(second_arg_bn()):
-        p5 = coor.conv2d(c3, 256, 1, activation_fn=None)
+        p6 = coor.conv2d(c4, 1024, kernel_size=1)
+        p6 = coor.conv2d(p6, 256, 3, rate=1)
+        p6_upsample = tf.image.resize_bilinear(p6, tf.shape(c3)[1:3])
+        p6 = coor.conv2d(p6, 256, kernel_size=3, activation_fn=None)
+
+        p5 = coor.conv2d(c3, 512, 1)
+        p5 = coor.conv2d(tf.concat([p6_upsample, p5], axis=3), 256, kernel_size=1)
         p5_upsample = tf.image.resize_bilinear(p5, tf.shape(c2)[1:3])
-        p5 = slim.nn.relu(p5)
-        p5 = coor.conv2d(p5, 256, 3, rate=2)
         p5 = coor.conv2d(p5, 256, 3, activation_fn=None)
 
-        p4 = coor.conv2d(c2, 256, 1, activation_fn=None)
-        p4 = p4 + p5_upsample
+        p4 = coor.conv2d(c2, 256, 1)
+        p4 = coor.conv2d(tf.concat([p4 + p5_upsample], axis=3), 256, kernel_size=1)
         p4_upsample = tf.image.resize_bilinear(p4, tf.shape(c1)[1:3])
-        p4 = slim.nn.relu(p4)
-        p4 = coor.conv2d(p4, 256, 3, rate=2)
         p4 = coor.conv2d(p4, 256, 3, activation_fn=None)
 
-        p3 = coor.conv2d(c1, 256, 1, activation_fn=None)
-        p3 = p3 + p4_upsample
-        p3 = slim.nn.relu(p3)
-        p3 = coor.conv2d(p3, 256, 3, rate=2)
+        p3 = coor.conv2d(c1, 256, 1)
+        p3 = coor.conv2d(tf.concat([p3 + p4_upsample], axis=3), 256, kernel_size=1)
         p3 = coor.conv2d(p3, 256, 3, activation_fn=None)
-
-        p6 = coor.conv2d(c4, 1024, kernel_size=1)
-        p6 = coor.conv2d(p6, 256, 3, rate=2)
-        p6 = coor.conv2d(p6, 256, kernel_size=3, stride=1, activation_fn=None)
-
-        p7 = slim.nn.relu(p6)
-        p7 = coor.conv2d(p7, 256, kernel_size=3, stride=2, activation_fn=None)
 
     return p3, p4, p5, p6, out_put, out_put_mask
 
+
+
+
+def fpn(inputs):
+    with slim.arg_scope(second_arg_bn()):
+        c1, c2, c3, c4 = resnet(inputs)
+
+    with slim.arg_scope(second_arg_bn()):
+        p6 = coor.conv2d(c4, 1024, kernel_size=1)
+        p6 = coor.conv2d(p6, 256, 3, rate=1)
+        p6_upsample = tf.image.resize_bilinear(p6, tf.shape(c3)[1:3])
+        p6 = coor.conv2d(p6, 256, kernel_size=3, activation_fn=None)
+
+        p5 = coor.conv2d(c3, 512, 1)
+        p5 = coor.conv2d(tf.concat([p6_upsample, p5], axis=3), 256, kernel_size=1)
+        p5_upsample = tf.image.resize_bilinear(p5, tf.shape(c2)[1:3])
+        p5 = coor.conv2d(p5, 256, 3, activation_fn=None)
+
+        p4 = coor.conv2d(c2, 256, 1)
+        p4 = coor.conv2d(tf.concat([p4 , p5_upsample], axis=3), 256, kernel_size=1)
+        p4_upsample = tf.image.resize_bilinear(p4, tf.shape(c1)[1:3])
+        p4 = coor.conv2d(p4, 256, 3, activation_fn=None)
+
+        p3 = coor.conv2d(c1, 256, 1)
+        p3 = coor.conv2d(tf.concat([p3, p4_upsample], axis=3), 256, kernel_size=1)
+        p3 = coor.conv2d(p3, 256, 3, activation_fn=None)
+
+    return p3, p4, p5
+
+
+def fpn_add(inputs):
+    with slim.arg_scope(second_arg_bn()):
+        c1, c2, c3, c4 = resnet(inputs)
+
+    with slim.arg_scope([slim.conv2d], activation_fn=None):
+        p6 = coor.conv2d(c4, 256, kernel_size=1)
+        p6_upsample = tf.image.resize_bilinear(p6, tf.shape(c3)[1:3])
+
+        p5 = coor.conv2d(c3, 256, 1)
+        p5 = p5 + p6_upsample
+        p5_upsample = tf.image.resize_bilinear(p5, tf.shape(c2)[1:3])
+        p5 = coor.conv2d(p5, 256, 3)
+
+        p4 = coor.conv2d(c2, 256, 1)
+        p4 = p4 + p5_upsample
+        p4_upsample = tf.image.resize_bilinear(p4, tf.shape(c1)[1:3])
+        p4 = coor.conv2d(p4, 256, 3)
+
+        p3 = coor.conv2d(c1, 256, 1)
+        p3 = p3 + p4_upsample
+        p3 = coor.conv2d(p3, 256, 3)
+
+        bn = [p3, p4, p5]
+
+        return bn
 
 
 if __name__ == '__main__':

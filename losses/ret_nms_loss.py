@@ -130,9 +130,9 @@ def get_loss(conf_t,loc_t,pred_loc, pred_confs,cfg, out_put, mask):
     final_loss_c = final_loss_c
 
     mask_loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=mask, logits=out_put)
-    mask_loss = tf.reduce_mean(mask_loss)*10
+    mask_loss = tf.reduce_mean(mask_loss)*5
 
-    dice_loss = (1-dice_coe(output=tf.nn.sigmoid(out_put), target=mask))*10
+    dice_loss = (1-dice_coe(output=tf.nn.sigmoid(out_put), target=mask))*5
 
 
     tf.losses.add_loss(final_loss_c)

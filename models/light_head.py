@@ -89,7 +89,7 @@ def propsal(rpn_probs, rpn_bbox):
     deltas = rpn_bbox
     deltas = deltas * np.reshape(cfg.RPN_BBOX_STD_DEV, [1, 1, 4])
     anchors = tf.constant(cfg.anchors,dtype=tf.float32)
-    ix = tf.nn.top_k(scores, 2000, sorted=True,name="top_anchors").indices
+    ix = tf.nn.top_k(scores, 3000, sorted=True,name="top_anchors").indices
     window = np.array([0, 0, 1, 1], dtype=np.float32)
     result = []
     for b in range(config.batch_size):
@@ -130,7 +130,7 @@ def detection_target(input_proposals, input_gt_class_ids, input_gt_boxes):
 
         roi_iou_max = tf.reduce_max(overlaps, axis=1)
 
-        positive_roi_bool = (roi_iou_max >= 0.7)
+        positive_roi_bool = (roi_iou_max >= config.rcnn_nms_the)
         positive_indices = tf.where(positive_roi_bool)[:, 0]
 
         #positive_indices = tf.concat([best_true, positive_indices], axis=0)

@@ -133,8 +133,6 @@ def fpn_re(img):
 
     return p1,p2,p3,p4
 
-
-
 def fpn(img):
     with slim.arg_scope(base_arg()):
         _, endpoint = resnet_v2_101(img)
@@ -143,32 +141,28 @@ def fpn(img):
     c3 = endpoint['resnet_v2_101/block3']
     c4 = endpoint['resnet_v2_101/block4']
     with slim.arg_scope(second_arg()):
-        p5 = slim.conv2d(c3, 256, 1, activation_fn=None)
+        p6 = slim.conv2d(c4, 1024, kernel_size=1)
+        p6 = slim.conv2d(p6, 256, 3, rate=1)
+        p6_upsample = tf.image.resize_bilinear(p6, tf.shape(c3)[1:3])
+
+
+        p5 = slim.conv2d(c3, 512, 1)
+        p5 = slim.conv2d(tf.concat([p6_upsample ,p5],axis=3), 256, kernel_size=1)
         p5_upsample = tf.image.resize_bilinear(p5, tf.shape(c2)[1:3])
-        p5 = slim.nn.relu(p5)
-        p5 = slim.conv2d(p5, 256, 3, rate=1)
+        p5 = slim.conv2d(p5, 256, 3, rate=2)
         p5 = slim.conv2d(p5, 256, 3, activation_fn=None)
 
-        p4 = slim.conv2d(c2, 256, 1, activation_fn=None)
-        p4 = p4 + p5_upsample
+        p4 = slim.conv2d(c2, 256, 1)
+        p4 = slim.conv2d(tf.concat([p4 + p5_upsample], axis=3), 256, kernel_size=1)
         p4_upsample = tf.image.resize_bilinear(p4, tf.shape(c1)[1:3])
-        p4 = slim.nn.relu(p4)
-        p4 = slim.conv2d(p4, 256, 3, rate=1)
+        p4 = slim.conv2d(p4, 256, 3, rate=2)
         p4 = slim.conv2d(p4, 256, 3, activation_fn=None)
 
-        p3 = slim.conv2d(c1, 256, 1, activation_fn=None)
-        p3 = p3 + p4_upsample
-        p3 = slim.nn.relu(p3)
-        p3 = slim.conv2d(p3, 256, 3, rate=1)
+        p3 = slim.conv2d(c1, 256, 1)
+        p3 = slim.conv2d(tf.concat([p3 + p4_upsample], axis=3), 256, kernel_size=1)
+        p3 = slim.conv2d(p3, 256, 3, rate=2)
         p3 = slim.conv2d(p3, 256, 3, activation_fn=None)
 
-        p6 = slim.conv2d(c4,1024,kernel_size=1)
-        p6 = slim.conv2d(p6, 512, 3, rate=1)
-        p6 = slim.conv2d(p6, 256, kernel_size=3, stride=1, activation_fn=None)
-
-        p7 = slim.nn.relu(p6)
-        p7 = slim.conv2d(p7, 256, kernel_size=3, stride=2, activation_fn=None)
-
-        bn = [p3, p4, p5, p6]
+        bn = [p3, p4, p5]
 
         return bn

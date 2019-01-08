@@ -70,7 +70,7 @@ def mid_cov(x, scope):
 def classfy_model(feature_map,ix, num_anchors=9):
     with tf.variable_scope('classfy'+str(ix),reuse=tf.AUTO_REUSE):
         with slim.arg_scope(base_arg()):
-            feature_map = slim.repeat(feature_map,4,coor.conv2d,num_outputs=128,kernel_size=3,stride=1,scope='classfy_repeat')
+            feature_map = slim.repeat(feature_map,4,coor.conv2d,num_outputs=256,kernel_size=3,stride=1,scope='classfy_repeat')
             #feature_map = slim.repeat(feature_map, 4, mid_cov, scope='classfy_repeat')
             #feature_map = mid_cov(feature_map, 'mid_'+str(ix))
         out_puts = slim.conv2d(feature_map, config.Config['num_classes'] * num_anchors, kernel_size=3, stride=1,scope='classfy_conv',
@@ -82,7 +82,7 @@ def classfy_model(feature_map,ix, num_anchors=9):
 def regression_model(feature_map,ix, num_anchors=9):
     with tf.variable_scope('regression'+str(ix), reuse=tf.AUTO_REUSE):
         with slim.arg_scope(base_arg()):
-            feature_map = slim.repeat(feature_map, 4, coor.conv2d, num_outputs=128, kernel_size=3, stride=1,scope='regression_repeat')
+            feature_map = slim.repeat(feature_map, 4, coor.conv2d, num_outputs=256, kernel_size=3, stride=1,scope='regression_repeat')
             #feature_map = slim.repeat(feature_map, 4, mid_cov, scope='regression_repeat')
         out_puts = slim.conv2d(feature_map, 4 * num_anchors, kernel_size=3, stride=1,scope='regression',activation_fn=None)
         out_puts = tf.reshape(out_puts, shape=(config.batch_size,-1, 4))
@@ -159,7 +159,7 @@ def predict(ig,pred_loc, pred_confs, cfg):
         scores=score,
         boxes=b1,
         iou_threshold=0.2,
-        max_output_size=100
+        max_output_size=1000
     )
     return tf.gather(box,keep,name='boxes'),tf.gather(score,keep,name='score'),tf.gather(cls,keep,name='pred')
 

@@ -40,6 +40,8 @@ def get_batch(batch_size,class_name, is_shuff = True,max_detect = 50,image_size=
                 img, box, lab = data_set.pull_item(idx[index])
             except:
                 index = index+1
+                if index >= length:
+                    index = 0
                 continue
 
             if  img is None or len(lab) == 0 or len(lab)>100:
@@ -103,7 +105,7 @@ def get_batch_mask(batch_size,class_name, is_shuff = True,max_detect = 50,image_
     elif class_name == 'lvcai':
         data_set = Lucai.Lucai(image_dr='/media/dsl/20d6b919-92e1-4489-b2be-a092290668e4/dsl/round2', image_size=config.image_size, is_crop=False)
     elif class_name == 'land':
-        data_set = data_set = BigLand.BigLandMask(image_size=config.image_size)
+        data_set = data_set = BigLand.BigLandBox(image_size=config.image_size)
 
     length = data_set.len()
     idx = list(range(length))
@@ -118,7 +120,8 @@ def get_batch_mask(batch_size,class_name, is_shuff = True,max_detect = 50,image_
                 img, box, lab, mask = data_set.pull_item(idx[index])
             except:
                 index = index+1
-
+                if index >= length:
+                    index = 0
                 continue
 
             if  img is None or len(lab) == 0 or len(lab)>100:
